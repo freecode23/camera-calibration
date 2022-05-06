@@ -94,13 +94,21 @@ int videoMode() {
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
 
         } else if (op == opSaveImageWorldPoints) {
+            // - save image points
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
+
             if (imagePoints.size() > 0) {
+                // - save image
+                string path_name = "res/";
+                string img_name = getNewFileName(path_name, "calibration_");
+                path_name.append(img_name);
+                cout << "saving image at: " << path_name << endl;
+                cv::imwrite(path_name, dstFrame);
 
                 // push image points
                 listImagePoints.push_back(vector<cv::Point2f>(imagePoints));
 
-                // calculate world points
+                // - save world points
                 if (listWorldPoints.size() == 0) {
                     cout << "create the first world points" << endl;
 
@@ -117,8 +125,14 @@ int videoMode() {
                 // cout << "saved image points: " << imagePoints << endl;
                 // push worldPoints
                 listWorldPoints.push_back(vector<cv::Point3f>(worldPoints));
+            } else {
+                cout << "no chessboard detected " << endl;
             }
             srcFrame.copyTo(dstFrame);
+            
+            // just draw chessboard again don't save until user ask
+            op = drawOnChessboard;
+            
 
         } else {  // op == none
             srcFrame.copyTo(dstFrame);
@@ -137,13 +151,6 @@ int videoMode() {
             op = opDrawOnChessboard;
 
         } else if (key == 's') {
-            // save image
-            cout << "saving image, 2D and 3D points.." << endl;
-            string path_name = "res/";
-            string img_name = getNewFileName(path_name, "calibration_");
-            path_name.append(img_name);
-            cv::imwrite(path_name, dstFrame);
-
             // save imagePoints
             op = opSaveImageWorldPoints;
 

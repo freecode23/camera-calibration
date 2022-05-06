@@ -119,16 +119,13 @@ void drawOnChessboard(cv::Mat &src, cv::Mat &dst, vector<cv::Point2f> & outputIm
 
     // 4. if it finds something use cornersSubpix on the grey image to get more accurate location
     if (found) {
-        cout << "found" << endl; 
+        // cout << "found" << endl; 
         cv::Size winSize = cv::Size(5, 5);
         cv::Size zeroZone = cv::Size(-1, -1);
         cv::cornerSubPix(srcGray, outputImagePoints, winSize, zeroZone,
                          criteria);
         cv::drawChessboardCorners(src, chessboardSize, outputImagePoints, found);                         
-    } else {
-        cout << "not found" << endl;
-    }
-
+    } 
     // 5. display
     src.copyTo(dst);
 }
