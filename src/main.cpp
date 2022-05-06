@@ -131,7 +131,7 @@ int videoMode() {
             srcFrame.copyTo(dstFrame);
             
             // just draw chessboard again don't save until user ask
-            op = drawOnChessboard;
+            op = opDrawOnChessboard;
             
 
         } else {  // op == none
