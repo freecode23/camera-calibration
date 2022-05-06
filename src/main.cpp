@@ -1,61 +1,56 @@
+#include <sys/stat.h>
+
 #include <iostream>
+
 #include "filter.hpp"
 #define PI 3.14159265
 using namespace std;
 
-enum filter
-{
+enum filter {
     none,
     greyCVT,
     greyAlt,
     gaussBlur,
-    sobelX,
-    sobelY,
-    mag,
-    blurQ,
-    cartoonize,
-    drawOp,
-    writeTxt
 };
 
-void orient(cv::Mat &sx, cv::Mat &sy, cv::Mat &dst)
-{
-    dst.create(sx.size(), CV_8UC3);
 
-    // create pointer to the first bit of sx and sy
-    // signed 16 bits (short)
-    int16_t *sxPtr = (int16_t *)sx.data;
-    int16_t *syPtr = (int16_t *)sy.data;
+string getNewFileName(string path_name) {
+    // create img name
+    int fileIdx = 0;
+    string img_name = "own";
+    img_name.append(to_string(fileIdx)).append(".png");
 
-    uint8_t *dstPtr = (uint8_t *)dst.data;
-    for (int i = 0; i < sx.rows; i++)
-    {
-        for (int j = 0; j < sx.cols; j++)
-        {
-            cv::Vec3s interOrient; // short
+    // create full path
+    // string path_name = "res/owntrial/";
+    string path_copy = path_name;
+    path_copy.append(img_name);
+    struct stat buffer;
+    bool isFileExist = (stat(path_copy.c_str(), &buffer) == 0);
 
-            // loop over channel
-            for (int ch = 0; ch < 3; ch++)
-            {
-                short sxVal = sxPtr[i * sx.cols * 3 + j * 3 + ch];
-                short syVal = syPtr[i * sx.cols * 3 + j * 3 + ch];
-                interOrient[ch] = (signed short) atan2(syVal, sxVal)* 180 / PI;
+    while (isFileExist) {
+        fileIdx += 1;
+        img_name = "own";
+        img_name.append(to_string(fileIdx)).append(".png");
 
-                dstPtr[i * dst.cols * 3 + j * 3 + ch] = (unsigned char)interOrient[ch];
-            }
-        }
+        // path_name = "res/owntrial/";
+        string path_copy = path_name;
+        path_copy.append(img_name);
+        isFileExist = (stat(path_copy.c_str(), &buffer) == 0);
     }
+    // file does not exists retunr this name
+    return img_name;
 }
 
-int videoMode()
-{
+
+
+
+int videoMode() {
     cv::VideoCapture *capdev;
     bool record = false;
 
     // 1. Open the video device
     capdev = new cv::VideoCapture(0);
-    if (!capdev->isOpened())
-    {
+    if (!capdev->isOpened()) {
         printf("Unable to open video device\n");
         return (-1);
     }
@@ -76,158 +71,61 @@ int videoMode()
     cv::Mat sYFrame;
     filter op = none;
 
-    for (;;)
-    {
+    for (;;) {
         *capdev >> srcFrame; // 6. get a new frame from the camera, treat as a stream
 
-        if (srcFrame.empty())
-        {
+        if (srcFrame.empty()) {
             printf("srcFrame is empty\n");
             break;
         }
 
         // Record
-        if(record == 1)
-        {
+        if(record == 1) {
             output.write(dstFrame);
         }
        
         // 7. Apply filters depending on key pressed
-        if (op == greyCVT)
-        {
+        if (op == greyCVT) {
             cv::cvtColor(srcFrame, dstFrame, cv::COLOR_BGR2GRAY);
-        }
-        else if (op == greyAlt)
-        {
-            greyscale(srcFrame, dstFrame);
-        }
-        else if (op == gaussBlur)
-        {
+        } else if (op == gaussBlur) {
             blur5x5(srcFrame, dstFrame);
-        }
-        else if (op == sobelX)
-        {
-            sobelX3x3(srcFrame, interFrame);
-
-            // convert image back to unsign char and save to destination
-            cv::convertScaleAbs(interFrame, dstFrame);
-        }
-        else if (op == sobelY)
-        {
-            sobelY3x3(srcFrame, interFrame);
-            cv::convertScaleAbs(interFrame, dstFrame);
-        }
-        else if (op == mag)
-        {
-            // apply filter and save image as sobelX
-            sobelX3x3(srcFrame, sXFrame);
-
-            // apply filter and save frame as sobelY
-            sobelY3x3(srcFrame, sYFrame);
-
-            // magnitude
-            orient(sXFrame, sYFrame, dstFrame);
-        }
-        else if (op == blurQ)
-        {
-            blurQuantize(srcFrame, dstFrame, 15);
-        }
-        else if(op == cartoonize)
-        {
-            cartoon(srcFrame, dstFrame, 20, 15);
-        }
-        else if(op == drawOp)
-        {
-            lineDraw(srcFrame, dstFrame);
-        }
-        else if(op == writeTxt)
-        {
-            writeText(srcFrame, dstFrame);
-        }
-        else
-        { // op == none
+        } else { // op == none
             srcFrame.copyTo(dstFrame);
         }
         cv::imshow("Video", dstFrame);
 
         // 9. If key strokes are pressed, set flags
         char key = cv::waitKey(5);
-        if (key == 'q')
-        {
+        if (key == 'q') {
             cout << "Quit program." << endl;
             break;
-        }
-        else if (key == 's') // 10. save single image to jpeg
-        {
-            cout << "saving" << endl;
-            cv::imwrite("myimg.jpg", dstFrame);
-        }
-        else if (key == 'r') // 11. record video to avi
-        {
+
+        }  else if (key == 's') {
+            cout << "saving file" <<endl;
+            string path_name = "res/";
+            string img_name = getNewFileName(path_name);
+            path_name.append(img_name);
+
+            cv::imwrite(path_name, dstFrame);
+            cv::imwrite("res/myimg.jpg", dstFrame);
+
+        } else if (key == 'r') {
             cout << "Recording starts.. " << endl;
             record = true;
-        }
-        else if (key == 'g') // 12. task 3: greyscale cvtColor
-        {
+
+        } else if (key == 'g') {
             cout << "Grey cvtColor..." << endl;
             op = greyCVT;
-        }
-        else if (key == 'h') // 13. task 4: greyscale alternative method
-        {
-            cout << "Grey alternative..." << endl;
-            op = greyAlt;
-        }
-        else if (key == 'b') // 14. task 5:
-        {
+
+        } else if (key == 'b') {
             cout << "Gaussian 5X5 blur.." << endl;
             op = gaussBlur;
-        }
-        else if (key == 'x') // 15. task 6
-        {
-            cout << "Sobel X filter.." << endl;
-            op = sobelX;
-        }
-        else if (key == 'y')
-        {
-            cout << "Sobel Y filter.." << endl;
-            op = sobelY;
-        }
-        else if (key == 'm')
-        {
-            cout << "mag sobel" << endl;
-            op = mag;
-        }
-        else if (key == 'l')
-        {
-            cout << "blur quantize" << endl;
-            op = blurQ;
-        }
-        else if (key == 'c')
-        {
-            cout << "cartoonize" << endl;
-            op = cartoonize;
-        }
-        else if( key == 'o')
-        {
-            cout << "line draw" << endl;
-            op = drawOp;
-        }
-        else if( key == 'w')
-        {
-            cout << "write text" << endl;
-            op = writeTxt;
-        }
-        else if (key == 32)
-        {
+        } else if (key == 32) {
             cout << "Reset color..." << endl;
             op = none;
-        }
-        else if (key == -1)
-        {
+        } else if (key == -1) {
             continue;
-        }
-        else
-        {
+        } else {
             cout << key << endl;
         }
     }
@@ -243,15 +141,14 @@ void imageMode() {
     srcImage = cv::imread("res/checkerboard.png", 1);
     filter op = none;
 
-    while (1)
-    {
+    while (1) {
         // 1. Apply filters depending on key pressed
-        if (op == gaussBlur)
-        {
+        if (op == gaussBlur) {
             blur5x5(srcImage, dstImage);
-        }
-        else
-        { // op == none
+
+        } else if (op == greyCVT) {
+
+        }else {  // op == none
             srcImage.copyTo(dstImage);
         }
         cv::imshow("image", dstImage);
@@ -259,42 +156,33 @@ void imageMode() {
         int k = cv::waitKey(0);
 
         // 8. check keys
-        if (k == 'q') // 1. quit
-        {
+        if (k == 'q') {
             break;
-        }
-        else if (k == 'b') // 2.blur
-        {
+        } else if(k == 'g') {
+            cout << "greyscale.." << endl;
+            op = greyCVT;
+
+        } else if (k == 'b') {
+            cout << "blurring.." << endl;
             op = gaussBlur;
-        }
-        else if (k == 3) // 3. right arrow, rotate right
-        {
-            cv::rotate(srcImage, srcImage, cv::ROTATE_90_CLOCKWISE);
-        }
-        else if (k == 2) // 4. left arrow, rotate left
-        {
+
+        } else if (k == 2) {
             cv::rotate(srcImage, srcImage, cv::ROTATE_90_COUNTERCLOCKWISE);
-        }
-        else if (k == 32) // 5. Reset to original img
-        {
+
+        } else if (k == 32) {
             cout << "reset" << endl;
             k = -1;
             op = none;
-        }
-        else if (k == -1)
-        {
-            continue; // 7. normally -1 returned,so don't print it
-        }
-        else
-        {
-            cout << k << endl; // 8. else print its value
+
+        } else if (k == -1) {
+            continue;  // 7. normally -1 returned,so don't print it
+        } else {
+            cout << k << endl;  // 8. else print its value
         }
     }
 }
 
-
 int main(int argc, char *argv[]) {
-
     char mode;
     cout << "enter mode: v video, i image" << endl;
 
@@ -302,10 +190,10 @@ int main(int argc, char *argv[]) {
 
     while (mode != 'q') {
         if (mode == 'v') {
-            videoMode();  
+            videoMode();
         } else if (mode == 'i') {
-            imageMode();  
-        } 
+            imageMode();
+        }
         cout << "enter mode: v video, i image, or q to quit" << endl;
         cin >> mode;
     }
