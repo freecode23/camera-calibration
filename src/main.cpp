@@ -6,18 +6,11 @@
 #define PI 3.14159265
 using namespace std;
 
-enum filter {
-    none,
-    greyCVT,
-    greyAlt,
-    gaussBlur,
-};
+enum filter { none, gaussBlur, opDrawOnChessboard, opSaveImageWorldPoints };
 
-
-string getNewFileName(string path_name) {
+string getNewFileName(string path_name, string img_name) {
     // create img name
     int fileIdx = 0;
-    string img_name = "own";
     img_name.append(to_string(fileIdx)).append(".png");
 
     // create full path
@@ -41,9 +34,6 @@ string getNewFileName(string path_name) {
     return img_name;
 }
 
-
-
-
 int videoMode() {
     cv::VideoCapture *capdev;
     bool record = false;
@@ -54,25 +44,40 @@ int videoMode() {
         printf("Unable to open video device\n");
         return (-1);
     }
+    capdev->set(cv::CAP_PROP_FRAME_WIDTH,
+                600);  // Setting the width of the video
+    capdev->set(cv::CAP_PROP_FRAME_HEIGHT,
+                400);  // Setting the height of the video//
 
     // 2. Get video resolution and create a size object
+
     cv::Size refS((int)capdev->get(cv::CAP_PROP_FRAME_WIDTH),
                   (int)capdev->get(cv::CAP_PROP_FRAME_HEIGHT));
     printf("Expected size: %d %d\n", refS.width, refS.height);
 
     // 3. Create video writer object filename, format, size
-    cv::VideoWriter output("myout.avi", cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 5, refS);
+    cv::VideoWriter output(
+        "myout.avi", cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 5, refS);
 
-    cv::namedWindow("Video", 1); // 4. identifies a window
-    cv::Mat srcFrame;            // 5. create srcFrame to display
-    cv::Mat interFrame;
+    cv::namedWindow("Video", 1);  // 4. identifies a window
+    cv::Mat srcFrame;             // 5. create srcFrame to display
     cv::Mat dstFrame;
-    cv::Mat sXFrame ;
-    cv::Mat sYFrame;
     filter op = none;
 
+    // chessboard Size
+    cv::Size chessboardSize(9, 6);
+
+    // last image point
+    vector<cv::Point2f> imagePoints;
+    vector<cv::Point3f> worldPoints;
+
+    // list of points for N images we picked
+    vector<vector<cv::Point2f>> listImagePoints;
+    vector<vector<cv::Point3f>> listWorldPoints;
+
     for (;;) {
-        *capdev >> srcFrame; // 6. get a new frame from the camera, treat as a stream
+        *capdev >>
+            srcFrame;  // 6. get a new frame from the camera, treat as a stream
 
         if (srcFrame.empty()) {
             printf("srcFrame is empty\n");
@@ -80,18 +85,45 @@ int videoMode() {
         }
 
         // Record
-        if(record == 1) {
+        if (record == 1) {
             output.write(dstFrame);
         }
-       
-        // 7. Apply filters depending on key pressed
-        if (op == greyCVT) {
-            cv::cvtColor(srcFrame, dstFrame, cv::COLOR_BGR2GRAY);
-        } else if (op == gaussBlur) {
-            blur5x5(srcFrame, dstFrame);
-        } else { // op == none
+
+        // 7. Execute operation
+        if (op == opDrawOnChessboard) {
+            drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
+
+        } else if (op == opSaveImageWorldPoints) {
+            drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
+            if (imagePoints.size() > 0) {
+
+                // push image points
+                listImagePoints.push_back(vector<cv::Point2f>(imagePoints));
+
+                // calculate world points
+                if (listWorldPoints.size() == 0) {
+                    cout << "create the first world points" << endl;
+
+                    // createWorldPoints(chessboardSize, worldPoints);
+                    for (int i = 0; i < chessboardSize.height; i++) {
+                        for (int j = 0; j < chessboardSize.width; j++) {
+                            worldPoints.push_back(
+                                cv::Point3f((float)j, (float)i * -1, 0));
+                        }
+                    }
+                }
+
+                // cout << "saved world points: " << worldPoints << endl;
+                // cout << "saved image points: " << imagePoints << endl;
+                // push worldPoints
+                listWorldPoints.push_back(vector<cv::Point3f>(worldPoints));
+            }
+            srcFrame.copyTo(dstFrame);
+
+        } else {  // op == none
             srcFrame.copyTo(dstFrame);
         }
+
         cv::imshow("Video", dstFrame);
 
         // 9. If key strokes are pressed, set flags
@@ -100,31 +132,32 @@ int videoMode() {
             cout << "Quit program." << endl;
             break;
 
-        }  else if (key == 's') {
-            cout << "saving file" <<endl;
-            string path_name = "res/";
-            string img_name = getNewFileName(path_name);
-            path_name.append(img_name);
+        } else if (key == 'd') {
+            cout << "draw on chessboard.." << endl;
+            op = opDrawOnChessboard;
 
+        } else if (key == 's') {
+            // save image
+            cout << "saving image, 2D and 3D points.." << endl;
+            string path_name = "res/";
+            string img_name = getNewFileName(path_name, "calibration_");
+            path_name.append(img_name);
             cv::imwrite(path_name, dstFrame);
-            cv::imwrite("res/myimg.jpg", dstFrame);
+
+            // save imagePoints
+            op = opSaveImageWorldPoints;
 
         } else if (key == 'r') {
             cout << "Recording starts.. " << endl;
             record = true;
 
-        } else if (key == 'g') {
-            cout << "Grey cvtColor..." << endl;
-            op = greyCVT;
-
-        } else if (key == 'b') {
-            cout << "Gaussian 5X5 blur.." << endl;
-            op = gaussBlur;
         } else if (key == 32) {
-            cout << "Reset color..." << endl;
+            cout << "Reset..." << endl;
             op = none;
+
         } else if (key == -1) {
             continue;
+
         } else {
             cout << key << endl;
         }
@@ -138,46 +171,48 @@ int videoMode() {
 void imageMode() {
     cv::Mat srcImage;
     cv::Mat dstImage;
-    srcImage = cv::imread("res/checkerboard.png", 1);
+
+    // chessboard Size
+    cv::Size chessboardSize(9, 6);
+
+    // last image point
+    vector<cv::Point2f> imagePoints;
+    vector<cv::Point3f> worldPoints;
+
+    // list of points for N images we picked
+    vector<vector<cv::Point2f>> listImagePoints;
+    vector<vector<cv::Point3f>> listWorldPoints;
+    srcImage = cv::imread("res/own2.png", 1);
     filter op = none;
 
     while (1) {
-        // 1. Apply filters depending on key pressed
-        if (op == gaussBlur) {
-            blur5x5(srcImage, dstImage);
+        // 1. Execute operations depending on key pressed
+        if (op == opDrawOnChessboard) {
+            drawOnChessboard(srcImage, dstImage, imagePoints, chessboardSize);
 
-        } else if (op == greyCVT) {
-
-        }else {  // op == none
+        } else {  // op == none
             srcImage.copyTo(dstImage);
         }
         cv::imshow("image", dstImage);
 
-        int k = cv::waitKey(0);
+        int key = cv::waitKey(0);
 
         // 8. check keys
-        if (k == 'q') {
+        if (key == 'q') {
             break;
-        } else if(k == 'g') {
-            cout << "greyscale.." << endl;
-            op = greyCVT;
+        } else if (key == 'd') {
+            cout << "draw on chessboard.." << endl;
+            op = opDrawOnChessboard;
 
-        } else if (k == 'b') {
-            cout << "blurring.." << endl;
-            op = gaussBlur;
-
-        } else if (k == 2) {
-            cv::rotate(srcImage, srcImage, cv::ROTATE_90_COUNTERCLOCKWISE);
-
-        } else if (k == 32) {
+        } else if (key == 32) {
             cout << "reset" << endl;
-            k = -1;
+            key = -1;
             op = none;
 
-        } else if (k == -1) {
-            continue;  // 7. normally -1 returned,so don't print it
+        } else if (key == -1) {
+            continue;
         } else {
-            cout << k << endl;  // 8. else print its value
+            cout << key << endl;
         }
     }
 }
