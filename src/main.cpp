@@ -8,30 +8,31 @@ using namespace std;
 
 enum filter { none, gaussBlur, opDrawOnChessboard, opSaveImageWorldPoints };
 
-string getNewFileName(string path_name, string img_name) {
+string getNewFileName(string pathName, string imgName) {
     // create img name
     int fileIdx = 0;
-    img_name.append(to_string(fileIdx)).append(".png");
+    string imgNameCopy;
+    imgNameCopy.append(to_string(fileIdx)).append(".png");
 
     // create full path
-    // string path_name = "res/owntrial/";
-    string path_copy = path_name;
-    path_copy.append(img_name);
+    // string pathName = "res/owntrial/";
+    string path_copy = pathName;
+    path_copy.append(imgNameCopy);
     struct stat buffer;
     bool isFileExist = (stat(path_copy.c_str(), &buffer) == 0);
 
     while (isFileExist) {
         fileIdx += 1;
-        img_name = "own";
-        img_name.append(to_string(fileIdx)).append(".png");
+        imgNameCopy = imgName;
+        imgNameCopy.append(to_string(fileIdx)).append(".png");
 
-        // path_name = "res/owntrial/";
-        string path_copy = path_name;
-        path_copy.append(img_name);
+        // pathName = "res/owntrial/";
+        string path_copy = pathName;
+        path_copy.append(imgNameCopy);
         isFileExist = (stat(path_copy.c_str(), &buffer) == 0);
     }
     // file does not exists retunr this name
-    return img_name;
+    return imgNameCopy;
 }
 
 int videoMode() {
@@ -100,8 +101,8 @@ int videoMode() {
             if (imagePoints.size() > 0) {
                 // - save image
                 string path_name = "res/";
-                string img_name = getNewFileName(path_name, "calibration_");
-                path_name.append(img_name);
+                string imgName = getNewFileName(path_name, "calibration_");
+                path_name.append(imgName);
                 cout << "saving image at: " << path_name << endl;
                 cv::imwrite(path_name, dstFrame);
 
