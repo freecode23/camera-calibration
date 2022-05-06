@@ -11,7 +11,7 @@ enum filter { none, gaussBlur, opDrawOnChessboard, opSaveImageWorldPoints };
 string getNewFileName(string pathName, string imgName) {
     // create img name
     int fileIdx = 0;
-    string imgNameCopy;
+    string imgNameCopy = imgName;
     imgNameCopy.append(to_string(fileIdx)).append(".png");
 
     // create full path
