@@ -153,6 +153,7 @@ void savePoints(cv::Size chessboardSize, vector<cv::Point2f> &imagePoints,
                 vector<vector<cv::Point2f>> &listImagePoints,
                 vector<vector<cv::Point3f>> &listWorldPoints) {
     if (imagePoints.size() > 0) {
+        
         // - save image points
         listImagePoints.push_back(vector<cv::Point2f>(imagePoints));
 

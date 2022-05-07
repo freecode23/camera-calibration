@@ -6,7 +6,14 @@
 #define PI 3.14159265
 using namespace std;
 
-enum filter { none, gaussBlur, opDrawOnChessboard, opSaveImageWorldPoints, opCalibrate, opSaveImage };
+enum filter {
+    none,
+    gaussBlur,
+    opDrawOnChessboard,
+    opSaveImageWorldPoints,
+    opCalibrate,
+    opSaveImage
+};
 
 int videoMode() {
     cv::VideoCapture *capdev;
@@ -89,12 +96,33 @@ int videoMode() {
             op = opDrawOnChessboard;
 
         } else if (op == opCalibrate) {
+            if (listImagePoints.size() < 5 || listWorldPoints.size() < 5) {
+            } else {
+                // 1. extrinsic parameter output
+                vector<cv::Mat> rotationVec;
+                vector<cv::Mat> translVec;
 
-            // get list of image and world points
+                // 2. intrinsic output
+                float calibVal[3][3] = {{1, 0, (float)srcFrame.cols / 2},
+                                        {0, 1, (float)srcFrame.cols / 2},
+                                        {0, 0, 1}};
+                cv::Mat calibMatrix = cv::Mat(1, 10, CV_32F, calibVal);
+                cv::Mat distortCoeffs;
+                cout << calibMatrix << endl;
 
-            // 
+                // 3. optional flags
+                int flag = 0;
+                // flag |= CALIB_FIX_ASPECT_RATIO;
 
+                // 4. get the projection matrix and record the error
+                double error = cv::calibrateCamera(
+                    listWorldPoints, listImagePoints, srcFrame.size(),
+                    calibMatrix, distortCoeffs, rotationVec, translVec);
+                cout << "projection error: " << error << endl;
+            }
 
+            srcFrame.copyTo(dstFrame); // make sure video keep playing
+            op = none;
         } else {  // op == none
             srcFrame.copyTo(dstFrame);
         }
@@ -116,15 +144,19 @@ int videoMode() {
             cout << ">>>>>>>>> saving chessboard" << endl;
             op = opSaveImageWorldPoints;
 
+        } else if (key == 'c') {
+            cout << ">>>>>>>>> calibrating" << endl;
+            op = opCalibrate;
+
         } else if (key == 'r') {
-            cout << "Recording starts.. " << endl;
+            cout << ">>>>>>>>> recording starts.. " << endl;
             record = true;
 
         } else if (key == 'i') {
             saveImage(dstFrame, "realtime_");
 
         } else if (key == 32) {
-            cout << "Reset..." << endl;
+            cout << ">>>>>>>>> reset..." << endl;
             op = none;
 
         } else if (key == -1) {
