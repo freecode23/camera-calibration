@@ -13,27 +13,6 @@
 #include <iostream>
 using namespace std;
 
-void greyscale(cv::Mat &src, cv::Mat &dst) {
-    // allocate destination immge use size and type of the source image.
-    dst.create(src.size(), src.type());
-
-    // for each ith row
-    for (int i = 0; i < src.rows; i++) {
-        int greenValue;
-
-        // at each jth column (pixel)
-        for (int j = 0; j < src.cols; j++) {
-            // takes channel green's value at this pixel
-            greenValue = src.at<cv::Vec3b>(i, j)[1];
-
-            // assign green values to channel red, green and blue
-            dst.at<cv::Vec3b>(i, j)[0] = greenValue;
-            dst.at<cv::Vec3b>(i, j)[1] = greenValue;
-            dst.at<cv::Vec3b>(i, j)[2] = greenValue;
-        }
-    }
-}
-
 void blur5x5(cv::Mat &src, cv::Mat &dst) {
     // 1. Create intermediate frame for storing h filter result
     cv::Mat inter;
@@ -98,15 +77,44 @@ void blur5x5(cv::Mat &src, cv::Mat &dst) {
     }
 }
 
-void drawOnChessboard(cv::Mat &src, cv::Mat &dst, vector<cv::Point2f> & outputImagePoints, cv::Size chessboardSize) {
+string getNewFileName(string pathName, string imgName) {
+    // create img name
+    int fileIdx = 0;
+    string imgNameCopy = imgName;
+    imgNameCopy.append(to_string(fileIdx)).append(".png");
 
+    // create full path
+    // string pathName = "res/owntrial/";
+    string path_copy = pathName;
+    path_copy.append(imgNameCopy);
+    struct stat buffer;
+    bool isFileExist = (stat(path_copy.c_str(), &buffer) == 0);
+
+    while (isFileExist) {
+        fileIdx += 1;
+        imgNameCopy = imgName;
+        imgNameCopy.append(to_string(fileIdx)).append(".png");
+
+        // pathName = "res/owntrial/";
+        string path_copy = pathName;
+        path_copy.append(imgNameCopy);
+        isFileExist = (stat(path_copy.c_str(), &buffer) == 0);
+    }
+    // file does not exists retunr this name
+    return imgNameCopy;
+}
+
+void drawOnChessboard(cv::Mat &src, cv::Mat &dst,
+                      vector<cv::Point2f> &outputImagePoints,
+                      cv::Size chessboardSize) {
     // 1. make grey frame
     cv::Mat srcGray;
     cv::cvtColor(src, srcGray, cv::COLOR_BGR2GRAY);
 
     // 2. find chessboardimagePoints
-    bool found = findChessboardCorners(src, chessboardSize, outputImagePoints,
-                        cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_FILTER_QUADS);
+    bool found = findChessboardCorners(
+        src, chessboardSize, outputImagePoints,
+        cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_FILTER_QUADS);
 
     // cout << "corners: " <<imagePoints << "size: " << chessboardSize;
 
@@ -117,15 +125,54 @@ void drawOnChessboard(cv::Mat &src, cv::Mat &dst, vector<cv::Point2f> & outputIm
         cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 40, 0.001);
     ;
 
-    // 4. if it finds something use cornersSubpix on the grey image to get more accurate location
+    // 4. if it finds something use cornersSubpix on the grey image to get more
+    // accurate location
+    src.copyTo(dst);
     if (found) {
-        // cout << "found" << endl; 
+        // cout << "found" << endl;
         cv::Size winSize = cv::Size(5, 5);
         cv::Size zeroZone = cv::Size(-1, -1);
         cv::cornerSubPix(srcGray, outputImagePoints, winSize, zeroZone,
                          criteria);
-        cv::drawChessboardCorners(src, chessboardSize, outputImagePoints, found);                         
+
+        cv::drawChessboardCorners(dst, chessboardSize, outputImagePoints,
+                                  found);
     } 
-    // 5. display
-    src.copyTo(dst);
+}
+
+void saveImage(cv::Mat frame, string imgPrefix) {
+    string pathName = "res/";
+    string imgName = getNewFileName(pathName, imgPrefix);
+    pathName.append(imgName);
+    cout << "saving image at: " << pathName << endl;
+    cv::imwrite(pathName, frame);
+}
+
+void savePoints(cv::Size chessboardSize, vector<cv::Point2f> &imagePoints,
+                vector<cv::Point3f> &worldPoints,
+                vector<vector<cv::Point2f>> &listImagePoints,
+                vector<vector<cv::Point3f>> &listWorldPoints) {
+    if (imagePoints.size() > 0) {
+        // - save image points
+        listImagePoints.push_back(vector<cv::Point2f>(imagePoints));
+
+        // - save world points
+        if (listWorldPoints.size() == 0) {
+            cout << "create the first world points" << endl;
+
+            // createWorldPoints(chessboardSize, worldPoints);
+            for (int i = 0; i < chessboardSize.height; i++) {
+                for (int j = 0; j < chessboardSize.width; j++) {
+                    worldPoints.push_back(
+                        cv::Point3f((float)j, (float)i * -1, 0));
+                }
+            }
+        }
+
+        // push worldPoints
+        listWorldPoints.push_back(vector<cv::Point3f>(worldPoints));
+
+    } else {
+        cout << "no chessboard detected " << endl;
+    }
 }

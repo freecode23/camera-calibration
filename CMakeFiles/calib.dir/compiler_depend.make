@@ -356,7 +356,10 @@ CMakeFiles/calib.dir/src/filter.cpp.o: src/filter.cpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/stitching/detail/blenders.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video/tracking.hpp \
-  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video/background_segm.hpp
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video/background_segm.hpp \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/sys/stat.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/sys/_types/_s_ifmt.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/sys/_types/_filesec_t.h
 
 CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/sys/stat.h \

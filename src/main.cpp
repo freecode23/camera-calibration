@@ -6,34 +6,7 @@
 #define PI 3.14159265
 using namespace std;
 
-enum filter { none, gaussBlur, opDrawOnChessboard, opSaveImageWorldPoints };
-
-string getNewFileName(string pathName, string imgName) {
-    // create img name
-    int fileIdx = 0;
-    string imgNameCopy = imgName;
-    imgNameCopy.append(to_string(fileIdx)).append(".png");
-
-    // create full path
-    // string pathName = "res/owntrial/";
-    string path_copy = pathName;
-    path_copy.append(imgNameCopy);
-    struct stat buffer;
-    bool isFileExist = (stat(path_copy.c_str(), &buffer) == 0);
-
-    while (isFileExist) {
-        fileIdx += 1;
-        imgNameCopy = imgName;
-        imgNameCopy.append(to_string(fileIdx)).append(".png");
-
-        // pathName = "res/owntrial/";
-        string path_copy = pathName;
-        path_copy.append(imgNameCopy);
-        isFileExist = (stat(path_copy.c_str(), &buffer) == 0);
-    }
-    // file does not exists retunr this name
-    return imgNameCopy;
-}
+enum filter { none, gaussBlur, opDrawOnChessboard, opSaveImageWorldPoints, opCalibrate, opSaveImage };
 
 int videoMode() {
     cv::VideoCapture *capdev;
@@ -95,45 +68,32 @@ int videoMode() {
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
 
         } else if (op == opSaveImageWorldPoints) {
-            // - save image points
+            // draw last one
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
+            string imgPrefix = "calibration_";
 
             if (imagePoints.size() > 0) {
-                // - save image
-                string path_name = "res/";
-                string imgName = getNewFileName(path_name, "calibration_");
-                path_name.append(imgName);
-                cout << "saving image at: " << path_name << endl;
-                cv::imwrite(path_name, dstFrame);
+                // save points and image
+                savePoints(chessboardSize, imagePoints, worldPoints,
+                           listImagePoints, listWorldPoints);
 
-                // push image points
-                listImagePoints.push_back(vector<cv::Point2f>(imagePoints));
+                // save image without the points
+                saveImage(srcFrame, imgPrefix);
 
-                // - save world points
-                if (listWorldPoints.size() == 0) {
-                    cout << "create the first world points" << endl;
-
-                    // createWorldPoints(chessboardSize, worldPoints);
-                    for (int i = 0; i < chessboardSize.height; i++) {
-                        for (int j = 0; j < chessboardSize.width; j++) {
-                            worldPoints.push_back(
-                                cv::Point3f((float)j, (float)i * -1, 0));
-                        }
-                    }
-                }
-
-                // cout << "saved world points: " << worldPoints << endl;
-                // cout << "saved image points: " << imagePoints << endl;
-                // push worldPoints
-                listWorldPoints.push_back(vector<cv::Point3f>(worldPoints));
             } else {
                 cout << "no chessboard detected " << endl;
+                srcFrame.copyTo(dstFrame);
             }
-            srcFrame.copyTo(dstFrame);
-            
+
             // just draw chessboard again don't save until user ask
             op = opDrawOnChessboard;
-            
+
+        } else if (op == opCalibrate) {
+
+            // get list of image and world points
+
+            // 
+
 
         } else {  // op == none
             srcFrame.copyTo(dstFrame);
@@ -148,16 +108,20 @@ int videoMode() {
             break;
 
         } else if (key == 'd') {
-            cout << "draw on chessboard.." << endl;
+            cout << ">>>>>>>>> draw on chessboard.." << endl;
             op = opDrawOnChessboard;
 
         } else if (key == 's') {
             // save imagePoints
+            cout << ">>>>>>>>> saving chessboard" << endl;
             op = opSaveImageWorldPoints;
 
         } else if (key == 'r') {
             cout << "Recording starts.. " << endl;
             record = true;
+
+        } else if (key == 'i') {
+            saveImage(dstFrame, "realtime_");
 
         } else if (key == 32) {
             cout << "Reset..." << endl;
