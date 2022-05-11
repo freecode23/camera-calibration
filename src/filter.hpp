@@ -52,7 +52,7 @@ void savePointsCsvVector(cv::Size chessboardSize,
                          vector<cv::Point3f> &worldPoints,
                          vector<vector<cv::Point2f>> &listImagePoints,
                          vector<vector<cv::Point3f>> &listWorldPoints,
-                         string imgName,
+                         char* imgName,
                          std::vector<char *> &imageNames);
 
 /*

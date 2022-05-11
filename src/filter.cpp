@@ -333,7 +333,7 @@ void savePointsCsvVector(cv::Size chessboardSize,
                          vector<cv::Point3f> &worldPoints,
                          vector<vector<cv::Point2f>> &listImagePoints,
                          vector<vector<cv::Point3f>> &listWorldPoints,
-                         string imgName, std::vector<char *> &imageNames) {
+                         char* imgName, std::vector<char *> &imageNames) {
     if (imagePoints.size() > 0) {
         // 1. save image points to vector 
         listImagePoints.push_back(vector<cv::Point2f>(imagePoints));
@@ -352,12 +352,13 @@ void savePointsCsvVector(cv::Size chessboardSize,
         // 2. save world points to vector 
         listWorldPoints.push_back(vector<cv::Point3f>(worldPoints));
 
-        // 3. save image name to vector
-        char imgNameChar[256];
-        strcpy(imgNameChar, imgName.c_str());
-
-        // 4. write to csv
+        // 3. write to csv
         char csvFile[] = "res/imageWorldPoints.csv";
+
+        char *imgNameChar = new char[strlen(imgName) + 1];
+        strcpy(imgNameChar, imgName);
+        imageNames.push_back(imgNameChar);
+
         for (int i = 0; i < imageNames.size(); i++) {
             cout << imageNames.at(i) << endl;
         }

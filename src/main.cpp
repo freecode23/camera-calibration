@@ -64,7 +64,7 @@ int videoMode() {
     // load the points from previously stored images
     // will stay empty if there is no previous data
     char src_csv[] = "res/imageWorldPoints.csv";
-    vector<string> imageNames;
+    vector<char *> imageNames;
     read2d3DVectorsFromCSV(src_csv, chessboardSize, listImagePoints,
                            listWorldPoints, imageNames, 0);
 
@@ -92,16 +92,18 @@ int videoMode() {
             string imgPrefix = "calibration_";
 
             if (imagePoints.size() > 0) {
-                // - save image
+                // save image without the points
                 string imgName = saveImage(srcFrame, imgPrefix);
 
+                // convert string to char
+                char imgNameChar[256];
+                strcpy(imgNameChar, imgName.c_str());
 
-                imageNames.push_back(imgNameChar);
-
-                // - save points in a csv and in 2 vectors then save image to res folder
+                // save points in a csv and in 2 vectors then save image to res
+                // folder
                 savePointsCsvVector(chessboardSize, imagePoints, worldPoints,
-                                    listImagePoints, listWorldPoints, imgName, imageNames);
-
+                                    listImagePoints, listWorldPoints,
+                                    imgNameChar, imageNames);
 
             } else {
                 cout << "no chessboard detected " << endl;
@@ -143,7 +145,7 @@ int videoMode() {
 
                 cout << ">>> saving intrinsic parameter: " << endl;
 
-                // 5. loop through all rotation vec overwrite at each program
+                // 5.loop through all rotation vec overwrite at each program
                 cout << ">>> saving rotation and translation matrix: " << endl;
                 char rtCsv[] = "res/rt.csv";
 
@@ -152,9 +154,8 @@ int videoMode() {
                                                 translVecs.at(0),
                                                 imageNames.at(0), rtCsv, 1);
 
-                // - append the rest                  
+                // - append the rest
                 for (int i = 1; i < rotationVecs.size(); i++) {
-
                     cout << "\ni: " << i << endl;
                     // grab a single vector (size 3 X 1)
                     cout << "before append" << endl;
