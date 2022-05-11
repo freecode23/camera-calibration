@@ -113,13 +113,15 @@ int videoMode() {
             // just draw chessboard again don't save until user ask
             op = opDrawOnChessboard;
 
+ // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CALIBRATION OPERATION >>>>>>>>>>>>>>>>>>>
         } else if (op == opCalibrate) {
+            // 1. Not enough image
             if (listImagePoints.size() < 5 || listWorldPoints.size() < 5) {
                 cout << "you only have " << listImagePoints.size()
                      << " calibration images. Please add more" << endl;
 
-            } else {
-                cout << ">>>>>>> calibrating using " << listImagePoints.size()
+            } else { // 2. Start calibrating
+                cout << ">>>>>>> Calibrating using " << listImagePoints.size()
                      << " and " << listWorldPoints.size()
                      << " image and world points " << endl;
 
@@ -139,36 +141,43 @@ int videoMode() {
                 double error = cv::calibrateCamera(
                     listWorldPoints, listImagePoints, srcFrame.size(),
                     calibMatrix, distortCoeff, rotationVecs, translVecs);
+
+                cout << ">>>>>>>> Calibration result:\n" << endl;
                 cout << "camera matrix:\n" << calibMatrix << endl;
                 cout << "distortion coeff: " << distortCoeff << endl;
                 cout << "projection error: " << error << endl;
 
-                cout << ">>> saving intrinsic parameter: " << endl;
-
-                // 5.loop through all rotation vec overwrite at each program
+                // 5. Write to csv
                 cout << ">>> saving rotation and translation matrix: " << endl;
                 char rtCsv[] = "res/rt.csv";
 
-                // - overwrite the first
+                // -- overwrite at first
                 appendRotationTranslationVector(rotationVecs.at(0),
                                                 translVecs.at(0),
                                                 imageNames.at(0), rtCsv, 1);
 
-                // - append the rest
                 for (int i = 1; i < rotationVecs.size(); i++) {
+                    // >>>>>>>>>>>>> - check value of rotation vector
                     cout << "\ni: " << i << endl;
-                    // grab a single vector (size 3 X 1)
-                    cout << "before append" << endl;
-                    cv::Mat singleRotVec = rotationVecs.at(i);
+                    for (int j = 0; j < rotationVecs.at(i).rows; j++) {
+                        for (int k = 0; k < rotationVecs.at(i).cols; k++) {
+                            cout << rotationVecs.at(i).at<cv::Vec3d>(j,k) << endl;
+                        }
+                    }
+
+                    // -- grab a single vector (size 3 X 1)
+                    cv::Vec3d singleRotVec = rotationVecs.at(i);
+
+                    // -- append to csv
                     appendRotationTranslationVector(singleRotVec,
                                                     translVecs.at(i),
                                                     imageNames.at(i), rtCsv, 0);
-                    cout << "after append" << endl;
                 }
             }
 
             srcFrame.copyTo(dstFrame);  // make sure video keep playing
             op = none;
+
         } else {  // op == none
             srcFrame.copyTo(dstFrame);
         }

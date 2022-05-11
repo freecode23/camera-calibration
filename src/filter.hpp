@@ -10,7 +10,6 @@
 #ifndef FILTER_H
 #define FILTER_H
 #include <sys/stat.h>
-
 #include <opencv2/opencv.hpp>
 #include <vector>
 using namespace std;

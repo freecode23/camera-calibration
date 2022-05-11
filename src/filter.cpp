@@ -305,8 +305,8 @@ void appendRotationTranslationVector(cv::Mat rotationVec, cv::Mat translVec,
     std::fwrite(buffer, sizeof(char), strlen(buffer), fp);
 
     // 2. write rotation vector
-    for (int j = 0; j < rotationVec.rows; j++) {
-        cv::Vec3d vectorRow = rotationVec.at<cv::Vec3d>(j, 0);
+    for (int i = 0; i < rotationVec.rows; i++) {
+        cv::Vec3d vectorRow = rotationVec.at<cv::Vec3d>(i, 0);
         char tmp[256];
         sprintf(tmp, ",%.4f,%.4f,%.4f", vectorRow[0], vectorRow[1],
                 vectorRow[2]);
@@ -314,15 +314,19 @@ void appendRotationTranslationVector(cv::Mat rotationVec, cv::Mat translVec,
     }
 
     // 3. write translation vector
-    //   for (int i = 0; i < translVec.rows; i++) {
-    //     //   for (int j = 0; j < translVec.cols; j++) {
-    //         // cv::Vec3d vectorRow = translVec.at<cv::Vec3d>(i, j);
-    //         // cout << vectorRow << endl;
-    //         // char tmp[256];
-    //         // sprintf(tmp, ",%.4f,%.4f,%.4f", vectorRow[0], vectorRow[1],
-    //         vectorRow[2]);
-    //         // std::fwrite(tmp, sizeof(char), strlen(tmp), fp);
-    //       }
+    for (int i = 0; i < translVec.rows; i++) {
+        for (int j = 0; j < translVec.cols; j++) {
+
+            // - grab a single row
+            cv::Vec3d vectorRow = translVec.at<cv::Vec3d>(i, j);
+            cout << "translVec:" << vectorRow << endl;
+
+            // - append the row to csv
+            char tmp[256];
+            sprintf(tmp, ",%.4f,%.4f,%.4f", vectorRow[0], vectorRow[1], vectorRow[2]);
+            std::fwrite(tmp, sizeof(char), strlen(tmp), fp);
+        }
+    }
 
     std::fwrite("\n", sizeof(char), 1, fp);  // EOL
     fclose(fp);
@@ -333,9 +337,9 @@ void savePointsCsvVector(cv::Size chessboardSize,
                          vector<cv::Point3f> &worldPoints,
                          vector<vector<cv::Point2f>> &listImagePoints,
                          vector<vector<cv::Point3f>> &listWorldPoints,
-                         char* imgName, std::vector<char *> &imageNames) {
+                         char *imgName, std::vector<char *> &imageNames) {
     if (imagePoints.size() > 0) {
-        // 1. save image points to vector 
+        // 1. save image points to vector
         listImagePoints.push_back(vector<cv::Point2f>(imagePoints));
 
         // - create world points if it doesnt exist yet
@@ -349,7 +353,7 @@ void savePointsCsvVector(cv::Size chessboardSize,
             }
         }
 
-        // 2. save world points to vector 
+        // 2. save world points to vector
         listWorldPoints.push_back(vector<cv::Point3f>(worldPoints));
 
         // 3. write to csv
@@ -362,7 +366,8 @@ void savePointsCsvVector(cv::Size chessboardSize,
         for (int i = 0; i < imageNames.size(); i++) {
             cout << imageNames.at(i) << endl;
         }
-        appendPointVectorsToCsv(imagePoints, worldPoints, csvFile, imgNameChar, 0);
+        appendPointVectorsToCsv(imagePoints, worldPoints, csvFile, imgNameChar,
+                                0);
 
     } else {
         cout << "no chessboard detected " << endl;
@@ -385,27 +390,27 @@ int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
     }
 
     printf("Reading %s\n", src_csv);
-
     int numPoints = chessboardSize.width * chessboardSize.height;
 
-    // 2. get the 2D vector and 3D vector of 1 image
+    // 1. get the 2D vector and 3D vector of 1 image
     int xImage = 0;
     for (;;) {
         cout << "\n>>>> printing image: " << xImage << endl;
         xImage += 1;
         vector<cv::Point3f> singleImage3f;  // Point3f vector of a single image
         vector<cv::Point2f> singleImage2f;  // Point2f vector of a single image
-        // 1. read the image name
+
+        // 2. read the image name
         if (getstring(fp, img_file)) {
             break;
         }
-        // save the image name
+
+        // 3. save the image name to vector
         char *fname = new char[strlen(img_file) + 1];
         strcpy(fname, img_file);
         imageNames.push_back(fname);
-        float eol;
 
-        // 3. for 54 times (in one image) get 2D
+        // 4. for 54 times (in one image) get 2D
         cv::Point2f imagePoint;
         for (int i = 0; i < numPoints; i++) {
             // cout << "imagePoint" << i << "=";
@@ -426,7 +431,7 @@ int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
         // push to the list of vector
         listImagePoints.push_back(singleImage2f);
 
-        // 6. for 54 times get 3D
+        // 5. for 54 times get 3D
         // cout << "\n>>>> printing world points " << endl;
         cv::Point3f worldPoint;
         for (int i = 0; i < numPoints; i++) {
@@ -439,22 +444,14 @@ int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
             getfloat(fp, &fval);
             worldPoint.y = fval;
 
-            eol = getfloat(fp, &fval);
+            getfloat(fp, &fval);
             worldPoint.z = fval;
 
             // 7. push to single vector
-            // cout << worldPoint.x << "," << worldPoint.y << "," <<
-            // worldPoint.z
-            //      << endl;
             singleImage3f.push_back(
                 cv::Point3f(worldPoint.x, worldPoint.y, worldPoint.z));
         }
         listWorldPoints.push_back(singleImage3f);
-
-        // if (eol) {
-        //     cout << "end of line" << endl;
-        //     break;
-        // }
 
     }  // end of loop of image
 
