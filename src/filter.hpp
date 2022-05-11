@@ -77,4 +77,8 @@ void appendRotationTranslationVector(cv::Mat rotationVec,
                                      char *&imageName, char *csvfilepath,
                                      int reset_file);
 
+
+void appendDistortionCalibMatrix(cv::Mat distortCoeff,
+                                 cv::Mat calibMatrix, char *csvfilepath, int reset_file);
+
 #endif

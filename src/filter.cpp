@@ -299,6 +299,14 @@ void appendRotationTranslationVector(cv::Mat rotationVec, cv::Mat translVec,
         printf("Unable to open output file %s\n", csvfilepath);
         exit(-1);
     }
+    string w = "w";
+    string modestr = string(mode);
+    if (w.compare(modestr) == 0) {
+        // 1. title
+        char title[] = "imageName,rotRow_0,rotRow_1,rotRow2,tranlRow_0,tranlRow_1,tranlRow2";
+        std::fwrite(title, sizeof(char), strlen(title), fp);
+        std::fwrite("\n", sizeof(char), 1, fp);
+    }
 
     // 1. write filename to buffer
     strcpy(buffer, imageName);
@@ -306,28 +314,72 @@ void appendRotationTranslationVector(cv::Mat rotationVec, cv::Mat translVec,
 
     // 2. write rotation vector
     for (int i = 0; i < rotationVec.rows; i++) {
-        cv::Vec3d vectorRow = rotationVec.at<cv::Vec3d>(i, 0);
-        char tmp[256];
-        sprintf(tmp, ",%.4f,%.4f,%.4f", vectorRow[0], vectorRow[1],
-                vectorRow[2]);
-        std::fwrite(tmp, sizeof(char), strlen(tmp), fp);
-    }
-
-    // 3. write translation vector
-    for (int i = 0; i < translVec.rows; i++) {
-        for (int j = 0; j < translVec.cols; j++) {
-
+        for (int j = 0; j < rotationVec.cols; j++) {
             // - grab a single row
-            cv::Vec3d vectorRow = translVec.at<cv::Vec3d>(i, j);
-            cout << "translVec:" << vectorRow << endl;
-
-            // - append the row to csv
             char tmp[256];
-            sprintf(tmp, ",%.4f,%.4f,%.4f", vectorRow[0], vectorRow[1], vectorRow[2]);
+            sprintf(tmp, ",%.4f", rotationVec.at<double>(i, j));
             std::fwrite(tmp, sizeof(char), strlen(tmp), fp);
         }
     }
 
+    // 3. write translation vector (3rows X 1 col)
+    for (int i = 0; i < translVec.rows; i++) {
+        for (int j = 0; j < translVec.cols; j++) {
+            // - grab a single row
+            char tmp[256];
+            sprintf(tmp, ",%.4f", translVec.at<double>(i, j));
+            std::fwrite(tmp, sizeof(char), strlen(tmp), fp);
+        }
+    }
+
+    std::fwrite("\n", sizeof(char), 1, fp);  // EOL
+    fclose(fp);
+}
+
+void appendDistortionCalibMatrix(cv::Mat distortCoeff, cv::Mat calibMatrix,
+                                 char *csvfilepath, int reset_file) {
+    char mode[8];
+    FILE *fp;
+
+    strcpy(mode, "a");  // append
+
+    if (reset_file) {
+        strcpy(mode, "w");
+    }
+
+    fp = fopen(csvfilepath, mode);
+    if (!fp) {
+        printf("Unable to open output file %s\n", csvfilepath);
+        exit(-1);
+    }
+
+    // 1. name
+    char calibName[] = "calib_matrix";
+    std::fwrite(calibName, sizeof(char), strlen(calibName), fp);
+
+    // 2. calibration matrix
+    for (int i = 0; i < calibMatrix.rows; i++) {
+        for (int j = 0; j < calibMatrix.cols; j++) {
+            // - append the row to csv
+            char tmp[256];
+            sprintf(tmp, ",%.4f", calibMatrix.at<double>(i, j));
+            std::fwrite(tmp, sizeof(char), strlen(tmp), fp);
+        }
+    }
+    std::fwrite("\n", sizeof(char), 1, fp);  // EOL
+
+    char distortName[] = "distortion_coeff";
+    std::fwrite(distortName, sizeof(char), strlen(distortName), fp);
+
+    // 3. write distortion coeff
+    for (int i = 0; i < distortCoeff.rows; i++) {
+        for (int j = 0; j < distortCoeff.cols; j++) {
+            // - append the row to csv
+            char tmp[256];
+            sprintf(tmp, ",%.4f", distortCoeff.at<double>(i, j));
+            std::fwrite(tmp, sizeof(char), strlen(tmp), fp);
+        }
+    }
     std::fwrite("\n", sizeof(char), 1, fp);  // EOL
     fclose(fp);
 }

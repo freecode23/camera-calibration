@@ -113,18 +113,15 @@ int videoMode() {
             // just draw chessboard again don't save until user ask
             op = opDrawOnChessboard;
 
- // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CALIBRATION OPERATION >>>>>>>>>>>>>>>>>>>
+            // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CALIBRATION OPERATION
+            // >>>>>>>>>>>>>>>>>>>
         } else if (op == opCalibrate) {
             // 1. Not enough image
             if (listImagePoints.size() < 5 || listWorldPoints.size() < 5) {
                 cout << "you only have " << listImagePoints.size()
                      << " calibration images. Please add more" << endl;
 
-            } else { // 2. Start calibrating
-                cout << ">>>>>>> Calibrating using " << listImagePoints.size()
-                     << " and " << listWorldPoints.size()
-                     << " image and world points " << endl;
-
+            } else {  // 2. Start calibrating
                 // 2. extrinsic parameter output
                 vector<cv::Mat> rotationVecs;
                 vector<cv::Mat> translVecs;
@@ -135,21 +132,31 @@ int videoMode() {
                                          {0, 0, 1}};
                 cv::Mat calibMatrix = cv::Mat(3, 3, CV_64FC1, &calibVal);
                 cv::Mat distortCoeff;
-                cout << "calib matrix" << calibMatrix << endl;
 
                 // 4. get the projection matrix and record the error
                 double error = cv::calibrateCamera(
                     listWorldPoints, listImagePoints, srcFrame.size(),
                     calibMatrix, distortCoeff, rotationVecs, translVecs);
 
-                cout << ">>>>>>>> Calibration result:\n" << endl;
-                cout << "camera matrix:\n" << calibMatrix << endl;
-                cout << "distortion coeff: " << distortCoeff << endl;
+                cout << "\n>>>>>>>>Calibration result:" << endl;
+                cv::Ptr<cv::Formatter> formatMat =
+                cv::Formatter::get(cv::Formatter::FMT_DEFAULT);
+                formatMat->set64fPrecision(4);
+                formatMat->set32fPrecision(4);
+                cout << "camera matrix:\n" << formatMat->format( calibMatrix) << endl;
+                cout << "distortion coeff: " << formatMat->format( distortCoeff)  << endl;
                 cout << "projection error: " << error << endl;
 
                 // 5. Write to csv
-                cout << ">>> saving rotation and translation matrix: " << endl;
+                char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
+                cout << "\n>>> saving distortion coeff and camera matrix to "
+                     << string(distortCalibCsv) << endl;
+                appendDistortionCalibMatrix(distortCoeff, calibMatrix,
+                                            distortCalibCsv, 1);
+
                 char rtCsv[] = "res/rt.csv";
+                cout << "\n>>> saving rotation and translation matrix to "
+                     << string(rtCsv) << endl;
 
                 // -- overwrite at first
                 appendRotationTranslationVector(rotationVecs.at(0),
@@ -157,19 +164,8 @@ int videoMode() {
                                                 imageNames.at(0), rtCsv, 1);
 
                 for (int i = 1; i < rotationVecs.size(); i++) {
-                    // >>>>>>>>>>>>> - check value of rotation vector
-                    cout << "\ni: " << i << endl;
-                    for (int j = 0; j < rotationVecs.at(i).rows; j++) {
-                        for (int k = 0; k < rotationVecs.at(i).cols; k++) {
-                            cout << rotationVecs.at(i).at<cv::Vec3d>(j,k) << endl;
-                        }
-                    }
-
-                    // -- grab a single vector (size 3 X 1)
-                    cv::Vec3d singleRotVec = rotationVecs.at(i);
-
                     // -- append to csv
-                    appendRotationTranslationVector(singleRotVec,
+                    appendRotationTranslationVector(rotationVecs.at(i),
                                                     translVecs.at(i),
                                                     imageNames.at(i), rtCsv, 0);
                 }
