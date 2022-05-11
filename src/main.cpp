@@ -17,7 +17,8 @@ enum filter {
     opDrawOnChessboard,
     opSaveImageWorldPoints,
     opCalibrate,
-    opSaveImage
+    opSaveImage,
+    opCameraPosition
 };
 
 int videoMode() {
@@ -87,15 +88,15 @@ int videoMode() {
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
 
         } else if (op == opSaveImageWorldPoints) {
-            // draw last one
+            // - draw last one
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
             string imgPrefix = "calibration_";
 
             if (imagePoints.size() > 0) {
-                // save image without the points
+                // - save image without the points
                 string imgName = saveImage(srcFrame, imgPrefix);
 
-                // convert string to char
+                // convert image name string to char
                 char imgNameChar[256];
                 strcpy(imgNameChar, imgName.c_str());
 
@@ -114,19 +115,36 @@ int videoMode() {
             op = opDrawOnChessboard;
 
         } else if (op == opCalibrate) {
-            
             // 1. Not enough image
             if (listImagePoints.size() < 5 || listWorldPoints.size() < 5) {
                 cout << "you only have " << listImagePoints.size()
                      << " calibration images. Please add more" << endl;
 
             } else {  // 2. Start calibrating
-                // 1. extrinsic parameter output
-                calibrating(srcFrame, listWorldPoints, listImagePoints, imageNames);
+                calibrating(srcFrame, listWorldPoints, listImagePoints,
+                            imageNames);
             }
 
             srcFrame.copyTo(dstFrame);  // make sure video keep playing
             op = none;
+
+        } else if (op == opCameraPosition) {
+            // 1. read calibration matrix
+            cv::Mat calibMatrix;
+            cv::Mat distortCoeff;
+            char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
+            readCalibDistorCoeffFromCSV(distortCalibCsv, calibMatrix, distortCoeff);
+
+            // 2. get image points
+            drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
+
+
+            // 3. if found
+            if (imagePoints.size() > 0) {
+
+
+            }
+
 
         } else {  // op == none
             srcFrame.copyTo(dstFrame);
@@ -159,6 +177,10 @@ int videoMode() {
 
         } else if (key == 'i') {
             saveImage(dstFrame, "realtime_");
+
+        } else if (key == 't') {
+            cout << ">>>>>>>>> calculate camera position..." << endl;
+            op = opCameraPosition;
 
         } else if (key == 32) {
             cout << ">>>>>>>>> reset..." << endl;

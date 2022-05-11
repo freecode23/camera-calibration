@@ -85,4 +85,8 @@ void appendDistortionCalibMatrix(cv::Mat distortCoeff,
 void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
                  vector<vector<cv::Point2f>> &listImagePoints,
                  std::vector<char *> &imageNames);
+
+
+void readCalibDistorCoeffFromCSV(char *src_csv, cv::Mat &calibMatrix,
+                                cv::Mat &distortCoeff);
 #endif

@@ -102,7 +102,6 @@ int getstring(FILE *fp, char os[]) {
     }
     // printf("\n"); // uncomment for debugging
     os[p] = '\0';
-    cout << "calibration image name:" << os << endl;
     return (eol);  // return true if eol
 }
 
@@ -573,4 +572,41 @@ void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
         appendRotationTranslationVector(rotationVecs.at(i), translVecs.at(i),
                                         imageNames.at(i), rtCsv, 0);
     }
+}
+
+void readCalibDistorCoeffFromCSV(char *src_csv, cv::Mat &calibMatrix,
+                                 cv::Mat &distortCoeff) {
+    calibMatrix = cv::Mat::zeros(3, 3, CV_64FC1);   // 3X3 matrix
+    distortCoeff = cv::Mat::zeros(5, 1, CV_64FC1);  // 5X1 matrix
+
+    FILE *fp;
+    char img_file[256];
+
+    fp = fopen(src_csv, "r");
+    if (!fp) {
+        printf("Unable to open file\n");
+    }
+
+    printf("\n>>>>>> Reading calibration matrix and coef %s\n", src_csv);
+
+    // 1. calibration matrix
+    getstring(fp, img_file); // read "calibMatrix"
+    for (int i = 0; i < 3; i++) {      // row
+        for (int j = 0; j < 3; j++) {  // col
+            float fval;
+            float eol = getfloat(fp, &fval);
+            calibMatrix.at<double>(i, j) = fval;
+        }
+    }
+
+    // 2. distortion coeff
+    getstring(fp, img_file);
+    for (int j = 0; j < 5; j++) {  // cols
+        float fval;
+        float eol = getfloat(fp, &fval);
+        distortCoeff.at<double>(0, j) = fval;
+    }
+
+    fclose(fp);
+    printf("Finished reading CSV file\n");
 }
