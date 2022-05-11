@@ -1,8 +1,13 @@
 #include <sys/stat.h>
 
+#include <algorithm>
+#include <fstream>
 #include <iostream>
+#include <iterator>
+#include <vector>
 
 #include "filter.hpp"
+
 #define PI 3.14159265
 using namespace std;
 
@@ -56,6 +61,13 @@ int videoMode() {
     vector<vector<cv::Point2f>> listImagePoints;
     vector<vector<cv::Point3f>> listWorldPoints;
 
+    // load the points from previously stored images
+    // will stay empty if there is no previous data
+    char src_csv[] = "res/imageWorldPoints.csv";
+    vector<string> imageNames;
+    read2d3DVectorsFromCSV(src_csv, chessboardSize, listImagePoints,
+                           listWorldPoints, imageNames, 0);
+
     for (;;) {
         *capdev >>
             srcFrame;  // 6. get a new frame from the camera, treat as a stream
@@ -80,12 +92,16 @@ int videoMode() {
             string imgPrefix = "calibration_";
 
             if (imagePoints.size() > 0) {
-                // save points and image
-                savePoints(chessboardSize, imagePoints, worldPoints,
-                           listImagePoints, listWorldPoints);
+                // - save image
+                string imgName = saveImage(srcFrame, imgPrefix);
 
-                // save image without the points
-                saveImage(srcFrame, imgPrefix);
+
+                imageNames.push_back(imgNameChar);
+
+                // - save points in a csv and in 2 vectors then save image to res folder
+                savePointsCsvVector(chessboardSize, imagePoints, worldPoints,
+                                    listImagePoints, listWorldPoints, imgName, imageNames);
+
 
             } else {
                 cout << "no chessboard detected " << endl;
@@ -97,31 +113,60 @@ int videoMode() {
 
         } else if (op == opCalibrate) {
             if (listImagePoints.size() < 5 || listWorldPoints.size() < 5) {
+                cout << "you only have " << listImagePoints.size()
+                     << " calibration images. Please add more" << endl;
+
             } else {
-                // 1. extrinsic parameter output
-                vector<cv::Mat> rotationVec;
-                vector<cv::Mat> translVec;
+                cout << ">>>>>>> calibrating using " << listImagePoints.size()
+                     << " and " << listWorldPoints.size()
+                     << " image and world points " << endl;
 
-                // 2. intrinsic output
-                float calibVal[3][3] = {{1, 0, (float)srcFrame.cols / 2},
-                                        {0, 1, (float)srcFrame.cols / 2},
-                                        {0, 0, 1}};
-                cv::Mat calibMatrix = cv::Mat(1, 10, CV_32F, calibVal);
-                cv::Mat distortCoeffs;
-                cout << calibMatrix << endl;
+                // 2. extrinsic parameter output
+                vector<cv::Mat> rotationVecs;
+                vector<cv::Mat> translVecs;
 
-                // 3. optional flags
-                int flag = 0;
-                // flag |= CALIB_FIX_ASPECT_RATIO;
+                // 3. intrinsic output
+                double calibVal[3][3] = {{1, 0, (double)srcFrame.cols / 2},
+                                         {0, 1, (double)srcFrame.rows / 2},
+                                         {0, 0, 1}};
+                cv::Mat calibMatrix = cv::Mat(3, 3, CV_64FC1, &calibVal);
+                cv::Mat distortCoeff;
+                cout << "calib matrix" << calibMatrix << endl;
 
                 // 4. get the projection matrix and record the error
                 double error = cv::calibrateCamera(
                     listWorldPoints, listImagePoints, srcFrame.size(),
-                    calibMatrix, distortCoeffs, rotationVec, translVec);
+                    calibMatrix, distortCoeff, rotationVecs, translVecs);
+                cout << "camera matrix:\n" << calibMatrix << endl;
+                cout << "distortion coeff: " << distortCoeff << endl;
                 cout << "projection error: " << error << endl;
+
+                cout << ">>> saving intrinsic parameter: " << endl;
+
+                // 5. loop through all rotation vec overwrite at each program
+                cout << ">>> saving rotation and translation matrix: " << endl;
+                char rtCsv[] = "res/rt.csv";
+
+                // - overwrite the first
+                appendRotationTranslationVector(rotationVecs.at(0),
+                                                translVecs.at(0),
+                                                imageNames.at(0), rtCsv, 1);
+
+                // - append the rest                  
+                for (int i = 1; i < rotationVecs.size(); i++) {
+
+                    cout << "\ni: " << i << endl;
+                    // grab a single vector (size 3 X 1)
+                    cout << "before append" << endl;
+                    cv::Mat singleRotVec = rotationVecs.at(i);
+                    appendRotationTranslationVector(singleRotVec,
+                                                    translVecs.at(i),
+                                                    imageNames.at(i), rtCsv, 0);
+                    cout << "after append" << endl;
+                }
             }
 
-            srcFrame.copyTo(dstFrame); // make sure video keep playing
+            srcFrame.copyTo(dstFrame);  // make sure video keep playing
             op = none;
         } else {  // op == none
             srcFrame.copyTo(dstFrame);

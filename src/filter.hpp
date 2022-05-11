@@ -9,9 +9,10 @@
 //**********************************************************************************************************************
 #ifndef FILTER_H
 #define FILTER_H
+#include <sys/stat.h>
+
 #include <opencv2/opencv.hpp>
 #include <vector>
-#include <sys/stat.h>
 using namespace std;
 
 /*
@@ -44,11 +45,37 @@ void drawOnChessboard(cv::Mat &src, cv::Mat &dst,
                       std::vector<cv::Point2f> &imagePoints,
                       cv::Size chessboardSize);
 
-void saveImage(cv::Mat frame, string imgPrefix); 
+string saveImage(cv::Mat frame, string imgPrefix);
 
-void savePoints(cv::Size chessboardSize,
-                vector<cv::Point2f> &imagePoints,
-                vector<cv::Point3f> &worldPoints,
-                vector<vector<cv::Point2f>> &listImagePoints,
-                vector<vector<cv::Point3f>> &listWorldPoints);
+void savePointsCsvVector(cv::Size chessboardSize,
+                         vector<cv::Point2f> &imagePoints,
+                         vector<cv::Point3f> &worldPoints,
+                         vector<vector<cv::Point2f>> &listImagePoints,
+                         vector<vector<cv::Point3f>> &listWorldPoints,
+                         string imgName,
+                         std::vector<char *> &imageNames);
+
+/*
+  Given a file src_csv with the format of a string as the first column and
+  floating point numbers as the remaining columns, this function
+  returns the file as a std::vector of Point2f, and vector of Point3f
+  @param chessboardSize is the chess board size which will determine the number
+  of points we have that is the vector size.
+  @param listImagePoints will contain the 2D points of all the images
+  @param listWorldPoints contain the 3d world points of all the images
+
+  If echo_file is true, it prints out the contents of the file as read
+  into memory.
+  The function returns a non-zero value if something goes wrong.
+ */
+int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
+                           vector<vector<cv::Point2f>> &listImagePoints,
+                           vector<vector<cv::Point3f>> &listWorldPoints,
+                           std::vector<char *> &imageNames, int echo_file);
+
+void appendRotationTranslationVector(cv::Mat rotationVec,
+                                     cv::Mat translVec,
+                                     char *&imageName, char *csvfilepath,
+                                     int reset_file);
+
 #endif
