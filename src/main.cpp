@@ -113,62 +113,16 @@ int videoMode() {
             // just draw chessboard again don't save until user ask
             op = opDrawOnChessboard;
 
-            // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CALIBRATION OPERATION
-            // >>>>>>>>>>>>>>>>>>>
         } else if (op == opCalibrate) {
+            
             // 1. Not enough image
             if (listImagePoints.size() < 5 || listWorldPoints.size() < 5) {
                 cout << "you only have " << listImagePoints.size()
                      << " calibration images. Please add more" << endl;
 
             } else {  // 2. Start calibrating
-                // 2. extrinsic parameter output
-                vector<cv::Mat> rotationVecs;
-                vector<cv::Mat> translVecs;
-
-                // 3. intrinsic output
-                double calibVal[3][3] = {{1, 0, (double)srcFrame.cols / 2},
-                                         {0, 1, (double)srcFrame.rows / 2},
-                                         {0, 0, 1}};
-                cv::Mat calibMatrix = cv::Mat(3, 3, CV_64FC1, &calibVal);
-                cv::Mat distortCoeff;
-
-                // 4. get the projection matrix and record the error
-                double error = cv::calibrateCamera(
-                    listWorldPoints, listImagePoints, srcFrame.size(),
-                    calibMatrix, distortCoeff, rotationVecs, translVecs);
-
-                cout << "\n>>>>>>>>Calibration result:" << endl;
-                cv::Ptr<cv::Formatter> formatMat =
-                cv::Formatter::get(cv::Formatter::FMT_DEFAULT);
-                formatMat->set64fPrecision(4);
-                formatMat->set32fPrecision(4);
-                cout << "camera matrix:\n" << formatMat->format( calibMatrix) << endl;
-                cout << "distortion coeff: " << formatMat->format( distortCoeff)  << endl;
-                cout << "projection error: " << error << endl;
-
-                // 5. Write to csv
-                char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
-                cout << "\n>>> saving distortion coeff and camera matrix to "
-                     << string(distortCalibCsv) << endl;
-                appendDistortionCalibMatrix(distortCoeff, calibMatrix,
-                                            distortCalibCsv, 1);
-
-                char rtCsv[] = "res/rt.csv";
-                cout << "\n>>> saving rotation and translation matrix to "
-                     << string(rtCsv) << endl;
-
-                // -- overwrite at first
-                appendRotationTranslationVector(rotationVecs.at(0),
-                                                translVecs.at(0),
-                                                imageNames.at(0), rtCsv, 1);
-
-                for (int i = 1; i < rotationVecs.size(); i++) {
-                    // -- append to csv
-                    appendRotationTranslationVector(rotationVecs.at(i),
-                                                    translVecs.at(i),
-                                                    imageNames.at(i), rtCsv, 0);
-                }
+                // 1. extrinsic parameter output
+                calibrating(srcFrame, listWorldPoints, listImagePoints, imageNames);
             }
 
             srcFrame.copyTo(dstFrame);  // make sure video keep playing

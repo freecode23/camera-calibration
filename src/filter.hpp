@@ -81,4 +81,8 @@ void appendRotationTranslationVector(cv::Mat rotationVec,
 void appendDistortionCalibMatrix(cv::Mat distortCoeff,
                                  cv::Mat calibMatrix, char *csvfilepath, int reset_file);
 
+
+void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
+                 vector<vector<cv::Point2f>> &listImagePoints,
+                 std::vector<char *> &imageNames);
 #endif

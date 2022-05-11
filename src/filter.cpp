@@ -303,7 +303,9 @@ void appendRotationTranslationVector(cv::Mat rotationVec, cv::Mat translVec,
     string modestr = string(mode);
     if (w.compare(modestr) == 0) {
         // 1. title
-        char title[] = "imageName,rotRow_0,rotRow_1,rotRow2,tranlRow_0,tranlRow_1,tranlRow2";
+        char title[] =
+            "imageName,rotRow_0,rotRow_1,rotRow2,tranlRow_0,tranlRow_1,"
+            "tranlRow2";
         std::fwrite(title, sizeof(char), strlen(title), fp);
         std::fwrite("\n", sizeof(char), 1, fp);
     }
@@ -522,4 +524,53 @@ int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
     fclose(fp);
     printf("Finished reading CSV file\n");
     return (0);
+}
+
+void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
+                 vector<vector<cv::Point2f>> &listImagePoints,
+                 std::vector<char *> &imageNames) {
+    // 1, extrinsic output
+    vector<cv::Mat> rotationVecs;
+    vector<cv::Mat> translVecs;
+
+    // 2. intrinsic output
+    double calibVal[3][3] = {{1, 0, (double)srcFrame.cols / 2},
+                             {0, 1, (double)srcFrame.rows / 2},
+                             {0, 0, 1}};
+    cv::Mat calibMatrix = cv::Mat(3, 3, CV_64FC1, &calibVal);
+    cv::Mat distortCoeff;
+
+    // 3. get the projection matrix and record the error
+    double error = cv::calibrateCamera(listWorldPoints, listImagePoints,
+                                       srcFrame.size(), calibMatrix,
+                                       distortCoeff, rotationVecs, translVecs);
+
+    cout << "\n>>>>>>>>Calibration result:" << endl;
+    cv::Ptr<cv::Formatter> formatMat =
+        cv::Formatter::get(cv::Formatter::FMT_DEFAULT);
+    formatMat->set64fPrecision(4);
+    formatMat->set32fPrecision(4);
+    cout << "camera matrix:\n" << formatMat->format(calibMatrix) << endl;
+    cout << "distortion coeff: " << formatMat->format(distortCoeff) << endl;
+    cout << "projection error: " << error << endl;
+
+    // 4. Write to csv
+    char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
+    cout << "\n>>> saving distortion coeff and camera matrix to "
+         << string(distortCalibCsv) << endl;
+    appendDistortionCalibMatrix(distortCoeff, calibMatrix, distortCalibCsv, 1);
+
+    char rtCsv[] = "res/rt.csv";
+    cout << "\n>>> saving rotation and translation matrix to " << string(rtCsv)
+         << endl;
+
+    // -- overwrite at first
+    appendRotationTranslationVector(rotationVecs.at(0), translVecs.at(0),
+                                    imageNames.at(0), rtCsv, 1);
+
+    for (int i = 1; i < rotationVecs.size(); i++) {
+        // -- append to csv
+        appendRotationTranslationVector(rotationVecs.at(i), translVecs.at(i),
+                                        imageNames.at(i), rtCsv, 0);
+    }
 }
