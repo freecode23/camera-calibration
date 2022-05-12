@@ -183,6 +183,7 @@ string getNewFileName(string pathName, string imgName) {
     return imgNameCopy;
 }
 
+// >>>>>>>>>>> Task1
 void drawOnChessboard(cv::Mat &src, cv::Mat &dst,
                       vector<cv::Point2f> &outputImagePoints,
                       cv::Size chessboardSize) {
@@ -216,6 +217,49 @@ void drawOnChessboard(cv::Mat &src, cv::Mat &dst,
 
         cv::drawChessboardCorners(dst, chessboardSize, outputImagePoints,
                                   found);
+    }
+}
+
+// >>>>>>>>>>> Task2
+void savePointsCsvVector(cv::Size chessboardSize,
+                         vector<cv::Point2f> &imagePoints,
+                         vector<cv::Point3f> &worldPoints,
+                         vector<vector<cv::Point2f>> &listImagePoints,
+                         vector<vector<cv::Point3f>> &listWorldPoints,
+                         char *imgName, std::vector<char *> &imageNames) {
+    if (imagePoints.size() > 0) {
+        // 1. save image points to vector
+        listImagePoints.push_back(vector<cv::Point2f>(imagePoints));
+
+        // - create world points if it doesnt exist yet
+        if (worldPoints.size() == 0) {
+            cout << "create the first world points" << endl;
+            for (int i = 0; i < chessboardSize.height; i++) {
+                for (int j = 0; j < chessboardSize.width; j++) {
+                    worldPoints.push_back(
+                        cv::Point3f((float)j * 1.0, (float)i * -1.0, 0));
+                }
+            }
+        }
+
+        // 2. save world points to vector
+        listWorldPoints.push_back(vector<cv::Point3f>(worldPoints));
+
+        // 3. write to csv
+        char csvFile[] = "res/imageWorldPoints.csv";
+
+        char *imgNameChar = new char[strlen(imgName) + 1];
+        strcpy(imgNameChar, imgName);
+        imageNames.push_back(imgNameChar);
+
+        for (int i = 0; i < imageNames.size(); i++) {
+            cout << imageNames.at(i) << endl;
+        }
+        appendPointVectorsToCsv(imagePoints, worldPoints, csvFile, imgNameChar,
+                                0);
+
+    } else {
+        cout << "no chessboard detected " << endl;
     }
 }
 
@@ -280,6 +324,66 @@ int appendPointVectorsToCsv(vector<cv::Point2f> &v2, vector<cv::Point3f> &v3,
     return (0);
 }
 
+// >>>>>>>>>>>>> Task3
+void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
+                 vector<vector<cv::Point2f>> &listImagePoints,
+                 std::vector<char *> &imageNames) {
+    // 1, extrinsic output
+    vector<cv::Mat> rotationVecs;
+    vector<cv::Mat> translVecs;
+
+    // 2. intrinsic output
+    double calibVal[3][3] = {{1, 0, (double)srcFrame.cols / 2},
+                             {0, 1, (double)srcFrame.rows / 2},
+                             {0, 0, 1}};
+    cv::Mat calibMatrix = cv::Mat(3, 3, CV_64FC1, &calibVal);
+    cv::Mat distortCoeff;
+
+    // 3. get the projection matrix and record the error
+    double error = cv::calibrateCamera(listWorldPoints, listImagePoints,
+                                       srcFrame.size(), calibMatrix,
+                                       distortCoeff, rotationVecs, translVecs);
+
+    cout << "\n=====Calibration result:" << endl;
+    cv::Ptr<cv::Formatter> formatMat =
+        cv::Formatter::get(cv::Formatter::FMT_DEFAULT);
+    formatMat->set64fPrecision(4);
+    formatMat->set32fPrecision(4);
+    cout << "camera matrix:\n" << formatMat->format(calibMatrix) << endl;
+    cout << "distortion coeff: " << formatMat->format(distortCoeff) << endl;
+    cout << "projection error: " << error << endl;
+
+    // debug column
+    // cout << "distor coeff row col : " << distortCoeff.rows << "X"
+    //      << distortCoeff.cols << endl;
+    // cout << "rVec row col: " << rotationVecs.at(0).rows << "X"
+    //      << rotationVecs.at(0).cols << endl;
+    // cout << "tVec row col: " << translVecs.at(0).rows << "X"
+    //      << translVecs.at(0).cols << endl;
+
+    // 4. Write to csv
+    char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
+    cout << "\n- saving distortion coeff and camera matrix to "
+         << string(distortCalibCsv) << endl;
+    appendDistortionCalibMatrix(distortCoeff, calibMatrix, distortCalibCsv, 1);
+
+    char rtCsv[] = "res/rt.csv";
+    cout << "-saving rotation and translation matrix to " << string(rtCsv)
+         << endl;
+
+    // -- overwrite at first
+    appendRotationTranslationVector(rotationVecs.at(0), translVecs.at(0),
+                                    imageNames.at(0), rtCsv, 1);
+
+    for (int i = 1; i < rotationVecs.size(); i++) {
+        // -- append to csv
+        appendRotationTranslationVector(rotationVecs.at(i), translVecs.at(i),
+                                        imageNames.at(i), rtCsv, 0);
+    }
+}
+
+
+// util functions to append vectors to csv files
 void appendRotationTranslationVector(cv::Mat rotationVec, cv::Mat translVec,
                                      char *&imageName, char *csvfilepath,
                                      int reset_file) {
@@ -385,19 +489,23 @@ void appendDistortionCalibMatrix(cv::Mat distortCoeff, cv::Mat calibMatrix,
     fclose(fp);
 }
 
-void savePointsCsvVector(cv::Size chessboardSize,
-                         vector<cv::Point2f> &imagePoints,
-                         vector<cv::Point3f> &worldPoints,
-                         vector<vector<cv::Point2f>> &listImagePoints,
-                         vector<vector<cv::Point3f>> &listWorldPoints,
-                         char *imgName, std::vector<char *> &imageNames) {
+// >>>>>>>>>>>>> Task4
+bool getCameraPosition(cv::Size chessboardSize,
+                       vector<cv::Point3f> &worldPoints,
+                       vector<cv::Point2f> &imagePoints, cv::Mat &calibMatrix,
+                       cv::Mat &distortCoeff) {
     if (imagePoints.size() > 0) {
-        // 1. save image points to vector
-        listImagePoints.push_back(vector<cv::Point2f>(imagePoints));
+        // - load calibration matrix and distort coeff if its not
+        // initialized yet
+        if (calibMatrix.empty() || distortCoeff.empty()) {
+            char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
+            readCalibDistorCoeffFromCSV(distortCalibCsv, calibMatrix,
+                                        distortCoeff);
+        }
 
         // - create world points if it doesnt exist yet
         if (worldPoints.size() == 0) {
-            cout << "create the first world points" << endl;
+            cout << "2. create the first world points" << endl;
             for (int i = 0; i < chessboardSize.height; i++) {
                 for (int j = 0; j < chessboardSize.width; j++) {
                     worldPoints.push_back(
@@ -406,27 +514,77 @@ void savePointsCsvVector(cv::Size chessboardSize,
             }
         }
 
-        // 2. save world points to vector
-        listWorldPoints.push_back(vector<cv::Point3f>(worldPoints));
+        // - initialize output
+        cv::Mat rotVec(3, 1, cv::DataType<double>::type);
+        cv::Mat transVec(3, 1, cv::DataType<double>::type);
 
-        // 3. write to csv
-        char csvFile[] = "res/imageWorldPoints.csv";
+        // - solve
+        cv::solvePnP(worldPoints, imagePoints, calibMatrix, distortCoeff,
+                     rotVec, transVec);
 
-        char *imgNameChar = new char[strlen(imgName) + 1];
-        strcpy(imgNameChar, imgName);
-        imageNames.push_back(imgNameChar);
-
-        for (int i = 0; i < imageNames.size(); i++) {
-            cout << imageNames.at(i) << endl;
-        }
-        appendPointVectorsToCsv(imagePoints, worldPoints, csvFile, imgNameChar,
-                                0);
+        // - print
+        cv::Ptr<cv::Formatter> formatMat =
+            cv::Formatter::get(cv::Formatter::FMT_DEFAULT);
+        formatMat->set64fPrecision(4);
+        formatMat->set32fPrecision(4);
+        cout << "\nrotation vector: \n" << formatMat->format(rotVec) << endl;
+        cout << "translation vector: \n" << formatMat->format(transVec) << endl;
+        return true;
 
     } else {
-        cout << "no chessboard detected " << endl;
+        cout << "No camera with chessboard detected. Press \'T\' again "
+                "once you put your chessboard in front of camera"
+             << endl;
+        return false;
     }
 }
 
+/**
+ * @brief Util function for task 4 to load distortion coeff and calibration matrix from a csv file.
+ * 
+ * @param src_csv the csv filek
+ * @param calibMatrix the calibration matrix
+ * @param distortCoeff the distrotion coefficient
+ */
+void readCalibDistorCoeffFromCSV(char *src_csv, cv::Mat &calibMatrix,
+                                 cv::Mat &distortCoeff) {
+    calibMatrix = cv::Mat::zeros(3, 3, CV_64FC1);   // 3X3 matrix
+    distortCoeff = cv::Mat::zeros(1, 5, CV_64FC1);  // 1X5 matrix
+
+    FILE *fp;
+    char img_file[256];
+
+    fp = fopen(src_csv, "r");
+    if (!fp) {
+        printf("Unable to open file\n");
+    }
+
+    printf("\n>>>>>> Reading calibration matrix and coef %s\n", src_csv);
+
+    // 1. calibration matrix
+    getstring(fp, img_file);           // read "calibMatrix"
+    for (int i = 0; i < 3; i++) {      // row
+        for (int j = 0; j < 3; j++) {  // col
+            float fval;
+            float eol = getfloat(fp, &fval);
+            calibMatrix.at<double>(i, j) = fval;
+        }
+    }
+
+    // 2. distortion coeff
+    getstring(fp, img_file);
+    for (int j = 0; j < 5; j++) {  // cols
+        float fval;
+        float eol = getfloat(fp, &fval);
+        distortCoeff.at<double>(0, j) = fval;
+    }
+
+    fclose(fp);
+    printf("Finished reading CSV file\n");
+}
+
+
+// >>>>>>>>>>> Util
 int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
                            vector<vector<cv::Point2f>> &listImagePoints,
                            vector<vector<cv::Point3f>> &listWorldPoints,
@@ -448,7 +606,6 @@ int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
     // 1. get the 2D vector and 3D vector of 1 image
     int xImage = 0;
     for (;;) {
-        cout << "\n>>>> printing image: " << xImage << endl;
         xImage += 1;
         vector<cv::Point3f> singleImage3f;  // Point3f vector of a single image
         vector<cv::Point2f> singleImage2f;  // Point2f vector of a single image
@@ -523,90 +680,4 @@ int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
     fclose(fp);
     printf("Finished reading CSV file\n");
     return (0);
-}
-
-void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
-                 vector<vector<cv::Point2f>> &listImagePoints,
-                 std::vector<char *> &imageNames) {
-    // 1, extrinsic output
-    vector<cv::Mat> rotationVecs;
-    vector<cv::Mat> translVecs;
-
-    // 2. intrinsic output
-    double calibVal[3][3] = {{1, 0, (double)srcFrame.cols / 2},
-                             {0, 1, (double)srcFrame.rows / 2},
-                             {0, 0, 1}};
-    cv::Mat calibMatrix = cv::Mat(3, 3, CV_64FC1, &calibVal);
-    cv::Mat distortCoeff;
-
-    // 3. get the projection matrix and record the error
-    double error = cv::calibrateCamera(listWorldPoints, listImagePoints,
-                                       srcFrame.size(), calibMatrix,
-                                       distortCoeff, rotationVecs, translVecs);
-
-    cout << "\n>>>>>>>>Calibration result:" << endl;
-    cv::Ptr<cv::Formatter> formatMat =
-        cv::Formatter::get(cv::Formatter::FMT_DEFAULT);
-    formatMat->set64fPrecision(4);
-    formatMat->set32fPrecision(4);
-    cout << "camera matrix:\n" << formatMat->format(calibMatrix) << endl;
-    cout << "distortion coeff: " << formatMat->format(distortCoeff) << endl;
-    cout << "projection error: " << error << endl;
-
-    // 4. Write to csv
-    char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
-    cout << "\n>>> saving distortion coeff and camera matrix to "
-         << string(distortCalibCsv) << endl;
-    appendDistortionCalibMatrix(distortCoeff, calibMatrix, distortCalibCsv, 1);
-
-    char rtCsv[] = "res/rt.csv";
-    cout << "\n>>> saving rotation and translation matrix to " << string(rtCsv)
-         << endl;
-
-    // -- overwrite at first
-    appendRotationTranslationVector(rotationVecs.at(0), translVecs.at(0),
-                                    imageNames.at(0), rtCsv, 1);
-
-    for (int i = 1; i < rotationVecs.size(); i++) {
-        // -- append to csv
-        appendRotationTranslationVector(rotationVecs.at(i), translVecs.at(i),
-                                        imageNames.at(i), rtCsv, 0);
-    }
-}
-
-void readCalibDistorCoeffFromCSV(char *src_csv, cv::Mat &calibMatrix,
-                                 cv::Mat &distortCoeff) {
-    calibMatrix = cv::Mat::zeros(3, 3, CV_64FC1);   // 3X3 matrix
-    distortCoeff = cv::Mat::zeros(5, 1, CV_64FC1);  // 5X1 matrix
-
-    FILE *fp;
-    char img_file[256];
-
-    fp = fopen(src_csv, "r");
-    if (!fp) {
-        printf("Unable to open file\n");
-    }
-
-    printf("\n>>>>>> Reading calibration matrix and coef %s\n", src_csv);
-
-    // 1. calibration matrix
-    getstring(fp, img_file); // read "calibMatrix"
-    for (int i = 0; i < 3; i++) {      // row
-        for (int j = 0; j < 3; j++) {  // col
-            float fval;
-            float eol = getfloat(fp, &fval);
-            calibMatrix.at<double>(i, j) = fval;
-        }
-    }
-
-    // 2. distortion coeff
-    getstring(fp, img_file);
-    for (int j = 0; j < 5; j++) {  // cols
-        float fval;
-        float eol = getfloat(fp, &fval);
-        distortCoeff.at<double>(0, j) = fval;
-    }
-
-    fclose(fp);
-    printf("Finished reading CSV file\n");
 }

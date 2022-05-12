@@ -69,6 +69,9 @@ int videoMode() {
     read2d3DVectorsFromCSV(src_csv, chessboardSize, listImagePoints,
                            listWorldPoints, imageNames, 0);
 
+    cv::Mat calibMatrix;   // 3X3 matrix
+    cv::Mat distortCoeff;  // 1X5 matrix
+
     for (;;) {
         *capdev >>
             srcFrame;  // 6. get a new frame from the camera, treat as a stream
@@ -96,12 +99,10 @@ int videoMode() {
                 // - save image without the points
                 string imgName = saveImage(srcFrame, imgPrefix);
 
-                // convert image name string to char
+                // - save points in a csv and in 2 vectors then save image to
+                // res folder
                 char imgNameChar[256];
                 strcpy(imgNameChar, imgName.c_str());
-
-                // save points in a csv and in 2 vectors then save image to res
-                // folder
                 savePointsCsvVector(chessboardSize, imagePoints, worldPoints,
                                     listImagePoints, listWorldPoints,
                                     imgNameChar, imageNames);
@@ -129,22 +130,11 @@ int videoMode() {
             op = none;
 
         } else if (op == opCameraPosition) {
-            // 1. read calibration matrix
-            cv::Mat calibMatrix;
-            cv::Mat distortCoeff;
-            char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
-            readCalibDistorCoeffFromCSV(distortCalibCsv, calibMatrix, distortCoeff);
-
-            // 2. get image points
+            // 1. get image points
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
-
-
-            // 3. if found
-            if (imagePoints.size() > 0) {
-
-
+            if(!getCameraPosition(chessboardSize, worldPoints, imagePoints, calibMatrix, distortCoeff)) {
+               op = none;
             }
-
 
         } else {  // op == none
             srcFrame.copyTo(dstFrame);
@@ -159,27 +149,27 @@ int videoMode() {
             break;
 
         } else if (key == 'd') {
-            cout << ">>>>>>>>> draw on chessboard.." << endl;
+            cout << "\n>>>>>>>>> draw on chessboard.." << endl;
             op = opDrawOnChessboard;
 
         } else if (key == 's') {
             // save imagePoints
-            cout << ">>>>>>>>> saving chessboard" << endl;
+            cout << "\n>>>>>>>>> saving chessboard" << endl;
             op = opSaveImageWorldPoints;
 
         } else if (key == 'c') {
-            cout << ">>>>>>>>> calibrating" << endl;
+            cout << "\n>>>>>>>>> calibrating" << endl;
             op = opCalibrate;
 
         } else if (key == 'r') {
-            cout << ">>>>>>>>> recording starts.. " << endl;
+            cout << "\n>>>>>>>>> recording starts.. " << endl;
             record = true;
 
         } else if (key == 'i') {
             saveImage(dstFrame, "realtime_");
 
         } else if (key == 't') {
-            cout << ">>>>>>>>> calculate camera position..." << endl;
+            cout << "\n>>>>>>>>> calculate camera position..." << endl;
             op = opCameraPosition;
 
         } else if (key == 32) {
