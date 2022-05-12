@@ -362,7 +362,12 @@ CMakeFiles/calib.dir/src/filter.cpp.o: src/filter.cpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video/background_segm.hpp \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/fstream \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/filesystem \
-  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/stack
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/stack \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/viz.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/viz/types.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/viz/widgets.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/viz/viz3d.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/viz/vizcore.hpp
 
 CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/sys/stat.h \
@@ -728,7 +733,11 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video/background_segm.hpp
 
 
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/viz/vizcore.hpp:
+
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/stitching/detail/seam_finders.hpp:
+
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/viz.hpp:
 
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/stitching/detail/exposure_compensate.hpp:
 
@@ -860,6 +869,8 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/cerrno:
 
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/viz/types.hpp:
+
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/__errc:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/__mutex_base:
@@ -871,6 +882,8 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/flann/nn_index.h:
 
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/cvstd.inl.hpp:
+
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/viz/viz3d.hpp:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/complex:
 
@@ -1281,6 +1294,8 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/dnn/utils/inference_engine.hpp:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/sys/_types/_clock_t.h:
+
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/viz/widgets.hpp:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/AvailabilityVersions.h:
 

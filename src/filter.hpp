@@ -128,9 +128,14 @@ void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
  */
 bool getCameraPosition(cv::Size chessboardSize,
                        vector<cv::Point3f> &worldPoints,
-                       vector<cv::Point2f> &imagePoints, cv::Mat &calibMatrix,
-                       cv::Mat &distortCoeff);
+                       vector<cv::Point2f> &imagePoints,
+                       cv::Mat &calibMatrix,
+                       cv::Mat &distortCoeff,
+                       cv::Mat &rotVec,
+                       cv::Mat &transVec);
 
 
-
+void draw3DAxesOnChessboard(cv::Mat &srcFrame,
+                            cv::Mat &calibMatrix, cv::Mat &distortCoeff,
+                            cv::Mat &rotVec, cv::Mat &transVec);
 #endif

@@ -12,6 +12,7 @@
 
 #include <fstream>  //used for file handling
 #include <iostream>
+#include <opencv2/viz.hpp>
 #include <string>  //used for strings
 using namespace std;
 
@@ -221,6 +222,57 @@ void drawOnChessboard(cv::Mat &src, cv::Mat &dst,
 }
 
 // >>>>>>>>>>> Task2
+/**
+ * @brief utility function to save 2D and 3D points to csv file called
+ * imageWorldPoints.csv
+ *
+ * @param v2 the 2d points
+ * @param v3 the 3d points
+ * @param csvfilepath the file to save these points to
+ * @param image_filename the image file name
+ * @param reset_file
+ * @return int
+ */
+int appendPointVectorsToCsv(vector<cv::Point2f> &v2, vector<cv::Point3f> &v3,
+                            char *csvfilepath, const char *image_filename,
+                            int reset_file) {
+    char buffer[256];
+    char mode[8];
+    FILE *fp;
+
+    strcpy(mode, "a");
+
+    if (reset_file) {
+        strcpy(mode, "w");
+    }
+
+    fp = fopen(csvfilepath, mode);
+    if (!fp) {
+        printf("Unable to open output file %s\n", csvfilepath);
+        exit(-1);
+    }
+
+    // write the filename and the feature vector to the CSV file
+    strcpy(buffer, image_filename);
+
+    std::fwrite(buffer, sizeof(char), strlen(buffer), fp);
+    for (int i = 0; i < v2.size(); i++) {
+        char tmp[256];
+        sprintf(tmp, ",%.4f,%.4f", v2[i].x, v2[i].y);
+        std::fwrite(tmp, sizeof(char), strlen(tmp), fp);
+    }
+
+    for (int i = 0; i < v3.size(); i++) {
+        char tmp[256];
+        sprintf(tmp, ",%.4f,%.4f,%.4f", v3[i].x, v3[i].y, v3[i].z);
+        std::fwrite(tmp, sizeof(char), strlen(tmp), fp);
+    }
+
+    std::fwrite("\n", sizeof(char), 1, fp);  // EOL
+    fclose(fp);
+    return (0);
+}
+
 void savePointsCsvVector(cv::Size chessboardSize,
                          vector<cv::Point2f> &imagePoints,
                          vector<cv::Point3f> &worldPoints,
@@ -273,116 +325,7 @@ string saveImage(cv::Mat frame, string imgPrefix) {
     return imgName;
 }
 
-/**
- * @brief utility function to save 2D and 3D points to csv file called
- * imageWorldPoints.csv
- *
- * @param v2 the 2d points
- * @param v3 the 3d points
- * @param csvfilepath the file to save these points to
- * @param image_filename the image file name
- * @param reset_file
- * @return int
- */
-int appendPointVectorsToCsv(vector<cv::Point2f> &v2, vector<cv::Point3f> &v3,
-                            char *csvfilepath, const char *image_filename,
-                            int reset_file) {
-    char buffer[256];
-    char mode[8];
-    FILE *fp;
-
-    strcpy(mode, "a");
-
-    if (reset_file) {
-        strcpy(mode, "w");
-    }
-
-    fp = fopen(csvfilepath, mode);
-    if (!fp) {
-        printf("Unable to open output file %s\n", csvfilepath);
-        exit(-1);
-    }
-
-    // write the filename and the feature vector to the CSV file
-    strcpy(buffer, image_filename);
-
-    std::fwrite(buffer, sizeof(char), strlen(buffer), fp);
-    for (int i = 0; i < v2.size(); i++) {
-        char tmp[256];
-        sprintf(tmp, ",%.4f,%.4f", v2[i].x, v2[i].y);
-        std::fwrite(tmp, sizeof(char), strlen(tmp), fp);
-    }
-
-    for (int i = 0; i < v3.size(); i++) {
-        char tmp[256];
-        sprintf(tmp, ",%.4f,%.4f,%.4f", v3[i].x, v3[i].y, v3[i].z);
-        std::fwrite(tmp, sizeof(char), strlen(tmp), fp);
-    }
-
-    std::fwrite("\n", sizeof(char), 1, fp);  // EOL
-    fclose(fp);
-    return (0);
-}
-
 // >>>>>>>>>>>>> Task3
-void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
-                 vector<vector<cv::Point2f>> &listImagePoints,
-                 std::vector<char *> &imageNames) {
-    // 1, extrinsic output
-    vector<cv::Mat> rotationVecs;
-    vector<cv::Mat> translVecs;
-
-    // 2. intrinsic output
-    double calibVal[3][3] = {{1, 0, (double)srcFrame.cols / 2},
-                             {0, 1, (double)srcFrame.rows / 2},
-                             {0, 0, 1}};
-    cv::Mat calibMatrix = cv::Mat(3, 3, CV_64FC1, &calibVal);
-    cv::Mat distortCoeff;
-
-    // 3. get the projection matrix and record the error
-    double error = cv::calibrateCamera(listWorldPoints, listImagePoints,
-                                       srcFrame.size(), calibMatrix,
-                                       distortCoeff, rotationVecs, translVecs);
-
-    cout << "\n=====Calibration result:" << endl;
-    cv::Ptr<cv::Formatter> formatMat =
-        cv::Formatter::get(cv::Formatter::FMT_DEFAULT);
-    formatMat->set64fPrecision(4);
-    formatMat->set32fPrecision(4);
-    cout << "camera matrix:\n" << formatMat->format(calibMatrix) << endl;
-    cout << "distortion coeff: " << formatMat->format(distortCoeff) << endl;
-    cout << "projection error: " << error << endl;
-
-    // debug column
-    // cout << "distor coeff row col : " << distortCoeff.rows << "X"
-    //      << distortCoeff.cols << endl;
-    // cout << "rVec row col: " << rotationVecs.at(0).rows << "X"
-    //      << rotationVecs.at(0).cols << endl;
-    // cout << "tVec row col: " << translVecs.at(0).rows << "X"
-    //      << translVecs.at(0).cols << endl;
-
-    // 4. Write to csv
-    char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
-    cout << "\n- saving distortion coeff and camera matrix to "
-         << string(distortCalibCsv) << endl;
-    appendDistortionCalibMatrix(distortCoeff, calibMatrix, distortCalibCsv, 1);
-
-    char rtCsv[] = "res/rt.csv";
-    cout << "-saving rotation and translation matrix to " << string(rtCsv)
-         << endl;
-
-    // -- overwrite at first
-    appendRotationTranslationVector(rotationVecs.at(0), translVecs.at(0),
-                                    imageNames.at(0), rtCsv, 1);
-
-    for (int i = 1; i < rotationVecs.size(); i++) {
-        // -- append to csv
-        appendRotationTranslationVector(rotationVecs.at(i), translVecs.at(i),
-                                        imageNames.at(i), rtCsv, 0);
-    }
-}
-
-
 // util functions to append vectors to csv files
 void appendRotationTranslationVector(cv::Mat rotationVec, cv::Mat translVec,
                                      char *&imageName, char *csvfilepath,
@@ -489,59 +432,68 @@ void appendDistortionCalibMatrix(cv::Mat distortCoeff, cv::Mat calibMatrix,
     fclose(fp);
 }
 
-// >>>>>>>>>>>>> Task4
-bool getCameraPosition(cv::Size chessboardSize,
-                       vector<cv::Point3f> &worldPoints,
-                       vector<cv::Point2f> &imagePoints, cv::Mat &calibMatrix,
-                       cv::Mat &distortCoeff) {
-    if (imagePoints.size() > 0) {
-        // - load calibration matrix and distort coeff if its not
-        // initialized yet
-        if (calibMatrix.empty() || distortCoeff.empty()) {
-            char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
-            readCalibDistorCoeffFromCSV(distortCalibCsv, calibMatrix,
-                                        distortCoeff);
-        }
+void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
+                 vector<vector<cv::Point2f>> &listImagePoints,
+                 std::vector<char *> &imageNames) {
+    // 1, extrinsic output
+    vector<cv::Mat> rotationVecs;
+    vector<cv::Mat> translVecs;
 
-        // - create world points if it doesnt exist yet
-        if (worldPoints.size() == 0) {
-            cout << "2. create the first world points" << endl;
-            for (int i = 0; i < chessboardSize.height; i++) {
-                for (int j = 0; j < chessboardSize.width; j++) {
-                    worldPoints.push_back(
-                        cv::Point3f((float)j * 1.0, (float)i * -1.0, 0));
-                }
-            }
-        }
+    // 2. intrinsic output
+    double calibVal[3][3] = {{1, 0, (double)srcFrame.cols / 2},
+                             {0, 1, (double)srcFrame.rows / 2},
+                             {0, 0, 1}};
+    cv::Mat calibMatrix = cv::Mat(3, 3, CV_64FC1, &calibVal);
+    cv::Mat distortCoeff;
 
-        // - initialize output
-        cv::Mat rotVec(3, 1, cv::DataType<double>::type);
-        cv::Mat transVec(3, 1, cv::DataType<double>::type);
+    // 3. get the projection matrix and record the error
+    double error = cv::calibrateCamera(listWorldPoints, listImagePoints, srcFrame.size(),
+                                        calibMatrix, distortCoeff, rotationVecs, translVecs);
 
-        // - solve
-        cv::solvePnP(worldPoints, imagePoints, calibMatrix, distortCoeff,
-                     rotVec, transVec);
+    cout << "\n=====Calibration result:" << endl;
+    cv::Ptr<cv::Formatter> formatMat =
+        cv::Formatter::get(cv::Formatter::FMT_DEFAULT);
+    formatMat->set64fPrecision(4);
+    formatMat->set32fPrecision(4);
+    cout << "camera matrix:\n" << formatMat->format(calibMatrix) << endl;
+    cout << "distortion coeff: " << formatMat->format(distortCoeff) << endl;
+    cout << "projection error: " << error << endl;
 
-        // - print
-        cv::Ptr<cv::Formatter> formatMat =
-            cv::Formatter::get(cv::Formatter::FMT_DEFAULT);
-        formatMat->set64fPrecision(4);
-        formatMat->set32fPrecision(4);
-        cout << "\nrotation vector: \n" << formatMat->format(rotVec) << endl;
-        cout << "translation vector: \n" << formatMat->format(transVec) << endl;
-        return true;
+    // debug column
+    // cout << "distor coeff row col : " << distortCoeff.rows << "X"
+    //      << distortCoeff.cols << endl;
+    // cout << "rVec row col: " << rotationVecs.at(0).rows << "X"
+    //      << rotationVecs.at(0).cols << endl;
+    // cout << "tVec row col: " << translVecs.at(0).rows << "X"
+    //      << translVecs.at(0).cols << endl;
 
-    } else {
-        cout << "No camera with chessboard detected. Press \'T\' again "
-                "once you put your chessboard in front of camera"
-             << endl;
-        return false;
+    // 4. Write to csv
+    char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
+    cout << "\n- saving distortion coeff and camera matrix to "
+         << string(distortCalibCsv) << endl;
+    appendDistortionCalibMatrix(distortCoeff, calibMatrix, distortCalibCsv, 1);
+
+    char rtCsv[] = "res/rt.csv";
+    cout << "-saving rotation and translation matrix to " << string(rtCsv)
+         << endl;
+
+    // -- overwrite at first
+    appendRotationTranslationVector(rotationVecs.at(0), translVecs.at(0),
+                                    imageNames.at(0), rtCsv, 1);
+
+    for (int i = 1; i < rotationVecs.size(); i++) {
+        // -- append to csv
+        appendRotationTranslationVector(rotationVecs.at(i), translVecs.at(i),
+                                        imageNames.at(i), rtCsv, 0);
     }
 }
 
+// >>>>>>>>>>>>> Task4
+
 /**
- * @brief Util function for task 4 to load distortion coeff and calibration matrix from a csv file.
- * 
+ * @brief Util function for task 4 to load distortion coeff and calibration
+ * matrix from a csv file.
+ *
  * @param src_csv the csv filek
  * @param calibMatrix the calibration matrix
  * @param distortCoeff the distrotion coefficient
@@ -583,6 +535,147 @@ void readCalibDistorCoeffFromCSV(char *src_csv, cv::Mat &calibMatrix,
     printf("Finished reading CSV file\n");
 }
 
+bool getCameraPosition(cv::Size chessboardSize,
+                       vector<cv::Point3f> &worldPoints,
+                       vector<cv::Point2f> &imagePoints, cv::Mat &calibMatrix,
+                       cv::Mat &distortCoeff, cv::Mat &rotVec,
+                       cv::Mat &transVec) {
+    if (imagePoints.size() > 0) {
+        // - load calibration matrix and distort coeff if its not
+        // initialized yet
+        if (calibMatrix.empty() || distortCoeff.empty()) {
+            char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
+            readCalibDistorCoeffFromCSV(distortCalibCsv, calibMatrix,
+                                        distortCoeff);
+        }
+
+        // - create world points if it doesnt exist yet
+        if (worldPoints.size() == 0) {
+            cout << "2. create the first world points" << endl;
+            for (int i = 0; i < chessboardSize.height; i++) {
+                for (int j = 0; j < chessboardSize.width; j++) {
+                    worldPoints.push_back(
+                        cv::Point3f((float)j * 1.0, (float)i * -1.0, 0));
+                }
+            }
+        }
+
+        rotVec = cv::Mat(3, 1, cv::DataType<double>::type);
+        transVec = cv::Mat(3, 1, cv::DataType<double>::type);
+
+        // - solve
+        cv::solvePnP(worldPoints, imagePoints, calibMatrix, distortCoeff,
+                     rotVec, transVec);
+
+        return true;
+
+    } else {
+        return false;
+    }
+}
+
+// >>>>>>>>>>>>> Task5
+
+void draw2DLines(cv::Mat &srcFrame, cv::Point3f origin_3D, cv::Point3f dst_3D,
+                 cv::Mat &calibMatrix, cv::Mat &distortCoeff, cv::Mat &rotVec,
+                 cv::Mat &transVec, cv::Scalar color) {
+    // create 3d points to do projection of
+    // line 3D
+    vector<cv::Point3f> vec3D;
+    vec3D.push_back(origin_3D);
+    vec3D.push_back(dst_3D);
+
+    // line 2D
+    cv::Point2f origin_2D = cv::Point2f(0, 0);
+    cv::Point2f dst_2D = cv::Point2f(0, 0);
+    vector<cv::Point2f> vec2D;
+    vec2D.push_back(origin_2D);
+    vec2D.push_back(dst_2D);
+
+    // project the 3D
+    cv::projectPoints(vec3D, rotVec, transVec, calibMatrix, distortCoeff,
+                      vec2D);
+
+    int thickness = 2;
+    cv::line(srcFrame, vec2D.at(0), vec2D.at(1), color, thickness, cv::LINE_8);
+}
+
+// void draw3DAxesOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
+//                             cv::Mat &distortCoeff, cv::Mat &rotVec,
+//                             cv::Mat &transVec) {
+//     // create 3d points to do projection of
+//     cv::Point3f origin_3D = cv::Point3f(0, 0, 0);
+
+//     // X axes 3D
+//     cv::Point3f x_3D = cv::Point3f(6, 0, 0);
+//     draw2DLines(srcFrame, origin_3D, x_3D, calibMatrix, distortCoeff, rotVec,
+//                 transVec, cv::Scalar(255, 0, 0));
+
+//     // Y AXes
+//     cv::Point3f y_3D = cv::Point3f(0, -6, 0);
+//     draw2DLines(srcFrame, origin_3D, y_3D, calibMatrix, distortCoeff, rotVec,
+//                 transVec, cv::Scalar(0, 255, 0));
+
+//     // Z AXes
+//     cv::Point3f z_3D = cv::Point3f(0, 0, 6);
+//     draw2DLines(srcFrame, origin_3D, z_3D, calibMatrix, distortCoeff, rotVec,
+//                 transVec, cv::Scalar(0, 0, 255));
+// }
+
+// Task 6
+
+void draw3DAxesOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
+                            cv::Mat &distortCoeff, cv::Mat &rotVec,
+                            cv::Mat &transVec) {
+    vector<cv::Point3f> lines;
+    // 0.73156748, 0.77794309, 0.42523719], [0.62113842, 0.87886158,
+    // 0.12113842], [0.77794309, 0.92523719, 0.26843252], [0.57476281,
+    // 0.73156748, 0.27794309], [0.87886158, 0.62113842, 0.37886158],
+    // [0.72205691, 0.57476281, 0.23156748], [0.76843252, 0.72205691,
+    // 0.07476281], [0.92523719, 0.76843252, 0.22205691
+    lines.push_back(cv::Point3f(1, 0, 4));
+    lines.push_back(cv::Point3f(0, 0, 1));
+    lines.push_back(cv::Point3f(1, -4, 3));
+    lines.push_back(cv::Point3f(0, -4, 1));
+    lines.push_back(cv::Point3f(4, -4, 1));
+
+    for (int i = 0; i < lines.size(); i++) {
+        for (int j = 0; j < lines.size(); j++) {
+            draw2DLines(srcFrame, lines.at(i), lines.at(j), calibMatrix,
+                        distortCoeff, rotVec, transVec, cv::Scalar(255, 0, 0));
+        }
+    }
+
+    struct dataType {
+        cv::Point3d point;
+        int red;
+        int green;
+        int blue;
+    };
+    typedef dataType SpacePoint;
+    vector<SpacePoint> pointCloud;
+
+    ofstream outfile("res/pointcloud.ply");
+    outfile << "ply\n"
+            << "format ascii 1.0\n"
+            << "comment VTK generated PLY File\n";
+    outfile << "obj_info vtkPolyData points and polygons : vtk4.0\n"
+            << "element vertex " << pointCloud.size() << "\n";
+    outfile << "property float x\n"
+            << "property float y\n"
+            << "property float z\n"
+            << "element face 0\n";
+    outfile << "property list uchar int vertex_indices\n"
+            << "end_header\n";
+    for (int i = 0; i < pointCloud.size(); i++) {
+        cv::Point3d point = pointCloud.at(i).point;
+        cout << point.x << " ";
+        cout << point.y << " ";
+        cout << point.z << " ";
+        cout << "\n";
+    }
+    outfile.close();
+}
 
 // >>>>>>>>>>> Util
 int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
@@ -633,7 +726,6 @@ int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
             getfloat(fp, &fval);
             imagePoint.y = fval;
 
-            // cout << imagePoint.x << "," << imagePoint.y << endl;
             // 5. create 3D point and push to single vector
             singleImage2f.push_back(cv::Point2f(imagePoint.x, imagePoint.y));
         }
@@ -645,7 +737,6 @@ int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
         // cout << "\n>>>> printing world points " << endl;
         cv::Point3f worldPoint;
         for (int i = 0; i < numPoints; i++) {
-            // cout << "worldPoint" << i << "=";
             float fval;
             // - get the value and check if its end of the line
             getfloat(fp, &fval);

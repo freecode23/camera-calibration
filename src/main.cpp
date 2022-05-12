@@ -18,7 +18,8 @@ enum filter {
     opSaveImageWorldPoints,
     opCalibrate,
     opSaveImage,
-    opCameraPosition
+    opCameraPosition,
+    opProject
 };
 
 int videoMode() {
@@ -96,16 +97,17 @@ int videoMode() {
             string imgPrefix = "calibration_";
 
             if (imagePoints.size() > 0) {
-                // - save image without the points
+                // - save image
                 string imgName = saveImage(srcFrame, imgPrefix);
 
-                // - save points in a csv and in 2 vectors then save image to
-                // res folder
+                // - save points in a csv and in 2 vectors
                 char imgNameChar[256];
                 strcpy(imgNameChar, imgName.c_str());
                 savePointsCsvVector(chessboardSize, imagePoints, worldPoints,
                                     listImagePoints, listWorldPoints,
                                     imgNameChar, imageNames);
+
+                cout << worldPoints << endl;
 
             } else {
                 cout << "no chessboard detected " << endl;
@@ -132,8 +134,50 @@ int videoMode() {
         } else if (op == opCameraPosition) {
             // 1. get image points
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
-            if(!getCameraPosition(chessboardSize, worldPoints, imagePoints, calibMatrix, distortCoeff)) {
-               op = none;
+
+            // 2. get rVec and tVec
+            cv::Mat rotVec(3, 1, cv::DataType<double>::type);
+            cv::Mat transVec(3, 1, cv::DataType<double>::type);
+            if (getCameraPosition(chessboardSize, worldPoints, imagePoints,
+                                  calibMatrix, distortCoeff, rotVec,
+                                  transVec)) {
+                // - print
+                cv::Ptr<cv::Formatter> formatMat =
+                    cv::Formatter::get(cv::Formatter::FMT_DEFAULT);
+
+                formatMat->set64fPrecision(4);
+                formatMat->set32fPrecision(4);
+                cout << "\nrotation vector: \n"
+                     << formatMat->format(rotVec) << endl;
+                cout << "translation vector: \n"
+                     << formatMat->format(transVec) << endl;
+
+            } else {
+                cout << "No camera with chessboard detected. Press \'P\' again "
+                        "once you put your chessboard in front of camera"
+                     << endl;
+                op = none;
+            }
+
+        } else if (op == opProject) {
+            // 1. get image points
+            drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
+
+            // 2. get rVec and tVec
+            cv::Mat rotVec(3, 1, cv::DataType<double>::type);
+            cv::Mat transVec(3, 1, cv::DataType<double>::type);
+
+            if (getCameraPosition(chessboardSize, worldPoints, imagePoints,
+                                  calibMatrix, distortCoeff, rotVec,
+                                  transVec)) {
+                draw3DAxesOnChessboard(srcFrame, calibMatrix, distortCoeff,
+                                       rotVec, transVec);
+                srcFrame.copyTo(dstFrame);
+            } else {
+                cout << "No camera with chessboard detected. Press \'P\' again "
+                        "once you put your chessboard in front of camera"
+                     << endl;
+                op = none;
             }
 
         } else {  // op == none
@@ -171,6 +215,10 @@ int videoMode() {
         } else if (key == 't') {
             cout << "\n>>>>>>>>> calculate camera position..." << endl;
             op = opCameraPosition;
+
+        } else if (key == 'p') {
+            cout << "\n>>>>>>>>> project outside corners..." << endl;
+            op = opProject;
 
         } else if (key == 32) {
             cout << ">>>>>>>>> reset..." << endl;
