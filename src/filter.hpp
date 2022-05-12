@@ -49,7 +49,7 @@ string getNewFileName(string pathName, string imgName);
 int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
                            vector<vector<cv::Point2f>> &listImagePoints,
                            vector<vector<cv::Point3f>> &listWorldPoints,
-                           std::vector<char *> &imageNames, int echo_file)
+                           std::vector<char *> &imageNames, int echo_file);
 
 
 /*
