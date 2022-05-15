@@ -609,10 +609,7 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/__split_buffer \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/iomanip \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/iostream \
-  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/vector \
-  src/filter.hpp \
-  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/opencv.hpp \
-  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/opencv_modules.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/aruco.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/cvdef.h \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/version.hpp \
@@ -621,6 +618,7 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.0.0/include/arm_neon.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/array \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/base.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/opencv_modules.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/cvstd.hpp \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/cmath \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/math.h \
@@ -638,6 +636,7 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/float.h \
   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.0.0/include/float.h \
   /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/float.h \
+  /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/vector \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/mat.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/bufferpool.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/mat.inl.hpp \
@@ -649,6 +648,9 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/utility.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/optim.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/ovx.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/aruco/dictionary.hpp \
+  src/filter.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/opencv.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/calib3d.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/features2d.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/flann/miniflann.hpp \
@@ -754,6 +756,8 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/stitching/detail/warpers_inl.hpp:
 
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/stitching/detail/warpers.hpp:
+
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/aruco/dictionary.hpp:
 
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/stitching/warpers.hpp:
 
@@ -1350,6 +1354,8 @@ src/main.cpp:
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/_types/_nl_item.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/limits:
+
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/aruco.hpp:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/sys/_types/_nlink_t.h:
 

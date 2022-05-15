@@ -443,12 +443,13 @@ void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
     double calibVal[3][3] = {{1, 0, (double)srcFrame.cols / 2},
                              {0, 1, (double)srcFrame.rows / 2},
                              {0, 0, 1}};
-    cv::Mat calibMatrix = cv::Mat(3, 3, CV_64FC1, &calibVal);
+    cv::Mat calibMatrix = cv::Mat(3, 3, CV_64FC1, calibVal);
     cv::Mat distortCoeff;
 
     // 3. get the projection matrix and record the error
-    double error = cv::calibrateCamera(listWorldPoints, listImagePoints, srcFrame.size(),
-                                        calibMatrix, distortCoeff, rotationVecs, translVecs);
+    double error = cv::calibrateCamera(listWorldPoints, listImagePoints,
+                                       srcFrame.size(), calibMatrix,
+                                       distortCoeff, rotationVecs, translVecs);
 
     cout << "\n=====Calibration result:" << endl;
     cv::Ptr<cv::Formatter> formatMat =
@@ -459,20 +460,14 @@ void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
     cout << "distortion coeff: " << formatMat->format(distortCoeff) << endl;
     cout << "projection error: " << error << endl;
 
-    // debug column
-    // cout << "distor coeff row col : " << distortCoeff.rows << "X"
-    //      << distortCoeff.cols << endl;
-    // cout << "rVec row col: " << rotationVecs.at(0).rows << "X"
-    //      << rotationVecs.at(0).cols << endl;
-    // cout << "tVec row col: " << translVecs.at(0).rows << "X"
-    //      << translVecs.at(0).cols << endl;
-
     // 4. Write to csv
+    // - intrinsic
     char distortCalibCsv[] = "res/distortionCalibMatrix.csv";
     cout << "\n- saving distortion coeff and camera matrix to "
          << string(distortCalibCsv) << endl;
     appendDistortionCalibMatrix(distortCoeff, calibMatrix, distortCalibCsv, 1);
 
+    // - extrinsic
     char rtCsv[] = "res/rt.csv";
     cout << "-saving rotation and translation matrix to " << string(rtCsv)
          << endl;
@@ -578,7 +573,7 @@ bool getCameraPosition(cv::Size chessboardSize,
 
 void draw2DLines(cv::Mat &srcFrame, cv::Point3f origin_3D, cv::Point3f dst_3D,
                  cv::Mat &calibMatrix, cv::Mat &distortCoeff, cv::Mat &rotVec,
-                 cv::Mat &transVec, cv::Scalar color) {
+                 cv::Mat &transVec, cv::Scalar color, bool isArrow) {
     // create 3d points to do projection of
     // line 3D
     vector<cv::Point3f> vec3D;
@@ -597,36 +592,41 @@ void draw2DLines(cv::Mat &srcFrame, cv::Point3f origin_3D, cv::Point3f dst_3D,
                       vec2D);
 
     int thickness = 2;
-    cv::line(srcFrame, vec2D.at(0), vec2D.at(1), color, thickness, cv::LINE_8);
+    if (isArrow) {
+        cv::arrowedLine(srcFrame, vec2D.at(0), vec2D.at(1), color, thickness,
+                        cv::LINE_8, 0, 0.1);
+    } else {
+        cv::line(srcFrame, vec2D.at(0), vec2D.at(1), color, thickness,
+                        cv::LINE_8);
+    }
 }
-
-// void draw3DAxesOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
-//                             cv::Mat &distortCoeff, cv::Mat &rotVec,
-//                             cv::Mat &transVec) {
-//     // create 3d points to do projection of
-//     cv::Point3f origin_3D = cv::Point3f(0, 0, 0);
-
-//     // X axes 3D
-//     cv::Point3f x_3D = cv::Point3f(6, 0, 0);
-//     draw2DLines(srcFrame, origin_3D, x_3D, calibMatrix, distortCoeff, rotVec,
-//                 transVec, cv::Scalar(255, 0, 0));
-
-//     // Y AXes
-//     cv::Point3f y_3D = cv::Point3f(0, -6, 0);
-//     draw2DLines(srcFrame, origin_3D, y_3D, calibMatrix, distortCoeff, rotVec,
-//                 transVec, cv::Scalar(0, 255, 0));
-
-//     // Z AXes
-//     cv::Point3f z_3D = cv::Point3f(0, 0, 6);
-//     draw2DLines(srcFrame, origin_3D, z_3D, calibMatrix, distortCoeff, rotVec,
-//                 transVec, cv::Scalar(0, 0, 255));
-// }
-
-// Task 6
 
 void draw3DAxesOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
                             cv::Mat &distortCoeff, cv::Mat &rotVec,
                             cv::Mat &transVec) {
+    // create 3d points to do projection of
+    cv::Point3f origin_3D = cv::Point3f(0, 0, 0);
+
+    // X axes 3D
+    cv::Point3f x_3D = cv::Point3f(6, 0, 0);
+    draw2DLines(srcFrame, origin_3D, x_3D, calibMatrix, distortCoeff, rotVec,
+                transVec, cv::Scalar(255, 0, 0), true);
+
+    // Y AXes
+    cv::Point3f y_3D = cv::Point3f(0, -6, 0);
+    draw2DLines(srcFrame, origin_3D, y_3D, calibMatrix, distortCoeff, rotVec,
+                transVec, cv::Scalar(0, 255, 0), true);
+
+    // Z AXes
+    cv::Point3f z_3D = cv::Point3f(0, 0, 6);
+    draw2DLines(srcFrame, origin_3D, z_3D, calibMatrix, distortCoeff, rotVec,
+                transVec, cv::Scalar(0, 0, 255), true);
+}
+
+// Task 6
+void drawVirttualObjectOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
+                                    cv::Mat &distortCoeff, cv::Mat &rotVec,
+                                    cv::Mat &transVec) {
     vector<cv::Point3f> lines;
     // 0.73156748, 0.77794309, 0.42523719], [0.62113842, 0.87886158,
     // 0.12113842], [0.77794309, 0.92523719, 0.26843252], [0.57476281,
@@ -642,39 +642,9 @@ void draw3DAxesOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
     for (int i = 0; i < lines.size(); i++) {
         for (int j = 0; j < lines.size(); j++) {
             draw2DLines(srcFrame, lines.at(i), lines.at(j), calibMatrix,
-                        distortCoeff, rotVec, transVec, cv::Scalar(255, 0, 0));
+                        distortCoeff, rotVec, transVec, cv::Scalar(255, 0, 0), false);
         }
     }
-
-    struct dataType {
-        cv::Point3d point;
-        int red;
-        int green;
-        int blue;
-    };
-    typedef dataType SpacePoint;
-    vector<SpacePoint> pointCloud;
-
-    ofstream outfile("res/pointcloud.ply");
-    outfile << "ply\n"
-            << "format ascii 1.0\n"
-            << "comment VTK generated PLY File\n";
-    outfile << "obj_info vtkPolyData points and polygons : vtk4.0\n"
-            << "element vertex " << pointCloud.size() << "\n";
-    outfile << "property float x\n"
-            << "property float y\n"
-            << "property float z\n"
-            << "element face 0\n";
-    outfile << "property list uchar int vertex_indices\n"
-            << "end_header\n";
-    for (int i = 0; i < pointCloud.size(); i++) {
-        cv::Point3d point = pointCloud.at(i).point;
-        cout << point.x << " ";
-        cout << point.y << " ";
-        cout << point.z << " ";
-        cout << "\n";
-    }
-    outfile.close();
 }
 
 // >>>>>>>>>>> Util

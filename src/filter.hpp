@@ -138,4 +138,10 @@ bool getCameraPosition(cv::Size chessboardSize,
 void draw3DAxesOnChessboard(cv::Mat &srcFrame,
                             cv::Mat &calibMatrix, cv::Mat &distortCoeff,
                             cv::Mat &rotVec, cv::Mat &transVec);
+
+
+
+void drawVirttualObjectOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
+                            cv::Mat &distortCoeff, cv::Mat &rotVec,
+                            cv::Mat &transVec);
 #endif
