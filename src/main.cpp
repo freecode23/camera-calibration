@@ -203,37 +203,40 @@ int videoMode() {
                 op = none;
             }
         } else if (op == opHarris) {
+            cout << "opHarris" << endl;
             int blockSize = 2;
             int apertureSize = 3;
             double k = 0.04;
             cv::Mat srcGray;
-            int thresh = 120;
+            int thresh = 190;
             int MAX_THRESH = 255;
 
             // 1. convert src to gray
             cv::cvtColor(srcFrame, srcGray, cv::COLOR_BGR2GRAY);
 
-            // 2. get harris corner
+            // 2. get harris corner 
             cv::Mat corners = cv::Mat::zeros(srcFrame.size(), CV_32FC1);
-            cv::cornerHarris(srcGray, corners, blockSize, apertureSize, k,
-                             cv::BORDER_DEFAULT);
+
+            cout << "here" << endl;
+            cv::cornerHarris(srcGray, corners, blockSize, apertureSize, k, cv::BORDER_DEFAULT);
 
             cv::Mat corners_norm, corners_norm_scaled;
             cv::normalize(corners, corners_norm, 0, 255, cv::NORM_MINMAX,
                           CV_32FC1, cv::Mat());
-
-            srcFrame.copyTo(dstFrame);
             cv::convertScaleAbs(corners_norm, corners_norm_scaled);
 
+            srcFrame.copyTo(dstFrame);
+     
             for (int i = 0; i < corners_norm.rows; i++) {
                 for (int j = 0; j < corners_norm.cols; j++) {
                     if ((int)corners_norm.at<float>(i, j) > thresh) {
                         // draw circle
                         cv::circle(dstFrame, cv::Point(j, i), 5,
-                                   cv::Scalar(0, 0, 255), 2, 8, 0);
-                    }
+                                   cv::Scalar(0,0,255), 2, 8, 0);
+                    } 
                 }
             }
+            // cout << "finishcorner harris" << endl;
 
         } else if (op == opDetectAruco) {
 
