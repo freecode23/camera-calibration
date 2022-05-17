@@ -128,21 +128,67 @@ bool getCameraPosition(cv::Size chessboardSize,
                        cv::Mat &distortCoeff, cv::Mat &rotVec,
                        cv::Mat &transVec);
 
+
+// Task 5
+/**
+ * @brief Draw 3d axes on the chessboard origin corner by using open cv's projectPoints
+ * 
+ * @param srcFrame the frame that has the chessboard on it
+ * @param calibMatrix the calibration matrix
+ * @param distortCoeff the distortion coefficient
+ * @param rotVec the output rotation vector
+ * @param transVec the output translation vector
+ */
 void draw3DAxesOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
                             cv::Mat &distortCoeff, cv::Mat &rotVec,
                             cv::Mat &transVec);
 
-void drawVirttualObjectOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
+// Task 6
+/**
+ * @brief Draw a simple 3D polygon on chessboard that is projected on a 2D image frame
+ * 
+ * @param srcFrame the image frame to project the polygon onto
+ * @param calibMatrix the input calibration matrix
+ * @param distortCoeff the input distortion coefficient
+ * @param rotVec the input rotation vector
+ * @param transVec the input translation vector
+ */
+void drawPolygonOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
                                     cv::Mat &distortCoeff, cv::Mat &rotVec,
                                     cv::Mat &transVec);
 
-void read_obj(const std::string &file_path, std::vector<cv::Point3f> &vertices,
+
+// Extension 1
+void readObjFile(const std::string &file_path, std::vector<cv::Point3f> &vertices,
               std::vector<std::vector<int>> &faces);
 
-void drawObject(cv::Mat &rvec, cv::Mat &tvec, 
-                cv::Mat &camera_matrix,
-                cv::Mat &distortion_coefficients,
+
+/**
+ * @brief draw virtual object from obj file on a chessboard
+ * 
+ * @param srcFrame the input srcFrame
+ * @param rvec the input rotation vector
+ * @param tvec the input translation vector
+ * @param calibMatrix 
+ * @param distortCoeff 
+ * @param vertices 
+ * @param faces 
+ */
+void drawVirtualObjectOnChessboard(cv::Mat &srcFrame, cv::Mat &rvec, cv::Mat &tvec, 
+                cv::Mat &calibMatrix,
+                cv::Mat &distortCoeff,
                 vector<cv::Point3f> &vertices,
-                vector<vector<int>> &faces,
-                cv::Mat &frame);
+                vector<vector<int>> &faces);
+
+// Extension 2
+/** 
+ * @brief Project a movie on image that has aruco marker on them
+ * 
+ * @param srcFrame the input original frame without modification
+ * @param movieFrame the input movie frame we want to project to the original image
+ * @param dstFrame the output modified image
+ */
+void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame, cv::Mat &dstFrame);
+
+
 #endif

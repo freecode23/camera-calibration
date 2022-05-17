@@ -12,7 +12,7 @@
 
 #include <fstream>  //used for file handling
 #include <iostream>
-#include <opencv2/viz.hpp>
+#include <opencv2/aruco.hpp>
 #include <string>  //used for strings
 using namespace std;
 
@@ -624,7 +624,7 @@ void draw3DAxesOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
 }
 
 // Task 6
-void drawVirttualObjectOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
+void drawPolygonOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
                                     cv::Mat &distortCoeff, cv::Mat &rotVec,
                                     cv::Mat &transVec) {
     vector<cv::Point3f> lines;
@@ -727,24 +727,14 @@ int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
 
     }  // end of loop of image
 
-    // --> print out the list of 2D to debug
-    // cout << ">>>> printing image points << " << endl;
-    // for (int i = 0; i < listImagePoints.size(); i++) {
-    //     cout << i << "=" << listImagePoints.at(i) << endl;
-    // }
-
-    // --> print out the list of 3D to debug
-    // cout << "printing world points << " << endl;
-    // for (int i = 0; i < listWorldPoints.size(); i++) {
-    //     cout << i << "=" << listWorldPoints.at(i) << endl;
-    // }
-
     fclose(fp);
     printf("Finished reading CSV file\n");
     return (0);
 }
 
-void read_obj(const std::string &file_path, std::vector<cv::Point3f> &vertices,
+
+// Extension 1
+void readObjFile(const std::string &file_path, std::vector<cv::Point3f> &vertices,
               std::vector<std::vector<int>> &faces) {
     // try read
     std::ifstream file(file_path);
@@ -780,7 +770,6 @@ void read_obj(const std::string &file_path, std::vector<cv::Point3f> &vertices,
             vertices.push_back(cv::Point3f(x + 5, y - 5, z + 5));
 
         } else if (values.at(0) == "f") {
-
             faces.push_back({std::stoi(values.at(1)), std::stoi(values.at(2)),
                              std::stoi(values.at(3))});
         } else {
@@ -790,26 +779,147 @@ void read_obj(const std::string &file_path, std::vector<cv::Point3f> &vertices,
     }
 }
 
-void drawObject(cv::Mat &rotVec, cv::Mat &transVec, cv::Mat &calibMatrix,
+void drawVirtualObjectOnChessboard(cv::Mat &srcFrame,
+                cv::Mat &rotVec, cv::Mat &transVec, cv::Mat &calibMatrix,
                 cv::Mat &distortCoeff, vector<cv::Point3f> &vertices,
-                vector<vector<int>> &faces, cv::Mat &frame) {
+                vector<vector<int>> &faces) {
+
     // result 2D points
-    vector<cv::Point2f> object_image_points;
+    vector<cv::Point2f> points2D;
 
     cv::projectPoints(vertices, rotVec, transVec, calibMatrix, distortCoeff,
-                      object_image_points);
-    cout << "finish project points " << endl;
+                      points2D);
 
-    draw3DAxesOnChessboard(frame, calibMatrix, distortCoeff, rotVec, transVec);
+    draw3DAxesOnChessboard(srcFrame, calibMatrix, distortCoeff, rotVec, transVec);
 
     for (std::vector<int> &face : faces) {
-        cv::line(frame, object_image_points[face[0] - 1],
-                 object_image_points[face[1] - 1], cv::Scalar(0, 255, 0), 1);
+        cv::line(srcFrame, points2D[face[0] - 1],
+                 points2D[face[1] - 1], cv::Scalar(0, 255, 0), 1);
 
-        cv::line(frame, object_image_points[face[1] - 1],
-                 object_image_points[face[2] - 1], cv::Scalar(0, 255, 0), 1);
+        cv::line(srcFrame, points2D[face[1] - 1],
+                 points2D[face[2] - 1], cv::Scalar(0, 255, 0), 1);
 
-        cv::line(frame, object_image_points[face[2] - 1],
-                 object_image_points[face[0] - 1], cv::Scalar(0, 255, 0), 1);
+        cv::line(srcFrame, points2D[face[2] - 1],
+                 points2D[face[0] - 1], cv::Scalar(0, 255, 0), 1);
+    }
+}
+
+// Extension 2
+// >>>>>>>>>>> Util
+int getIndex(vector<int> v, int K) {
+    auto it = find(v.begin(), v.end(), K);
+
+    // If element was found
+    if (it != v.end()) {
+        // calculating the index
+        // of K
+        int index = it - v.begin();
+        return index;
+    } else {
+        // If the element is not
+        // present in the vector
+        return -1;
+    }
+}
+
+void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
+                        cv::Mat &dstFrame) {
+    // 1. get movie corner points (src)
+    // video version
+    // cv::Mat movieFrame = cv::imread("res/duck.png");
+    std::vector<cv::Point> pts_movie;
+    pts_movie.push_back(cv::Point(0, 0));  // top left then clockwise
+    pts_movie.push_back(cv::Point(movieFrame.rows, 0));
+    pts_movie.push_back(
+        cv::Point(movieFrame.rows, movieFrame.cols));    // bottom right
+    pts_movie.push_back(cv::Point(0, movieFrame.cols));  // bottom left
+
+    // 2. get aruco corner points
+    // - set variables
+    std::vector<int> markerIds;
+    std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
+    cv::Ptr<cv::aruco::DetectorParameters> parameters =
+        cv::aruco::DetectorParameters::create();
+    cv::Ptr<cv::aruco::Dictionary> dictionary =
+        cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+
+    // -detect aruco
+    cv::aruco::detectMarkers(srcFrame, dictionary, markerCorners, markerIds,
+                             parameters, rejectedCandidates);
+    cout << "\nmarkerCorners size=" << markerCorners.size() << endl;
+
+    // - save the corners we want to map it into
+    std::vector<cv::Point> pts_dst;
+    if (markerCorners.size() == 4) {
+        for (int i = 0; i < markerCorners.size(); i++) {
+            int cornerToCircle;
+            if (markerIds.at(i) == 1) {
+                cornerToCircle = 2;
+
+            } else if (markerIds.at(i) == 2) {
+                cornerToCircle = 0;
+
+            } else if (markerIds.at(i) == 3) {
+                cornerToCircle = 1;
+
+            } else if (markerIds.at(i) == 4) {
+                cornerToCircle = 3;
+            }
+            srcFrame.copyTo(dstFrame);
+            cv::circle(dstFrame, markerCorners.at(i).at(cornerToCircle), 5,
+                       cv::Scalar(0, 255, 255), 2, 8, 0);
+        }
+
+        // 2,3,1,4
+        // push back the corner points
+        int topLeftIdx = getIndex(markerIds, 2);
+        int topRightIdx = getIndex(markerIds, 3);
+        int bottomRightIdx = getIndex(markerIds, 1);
+        int bottomLeftIdx = getIndex(markerIds, 4);
+        pts_dst.push_back(markerCorners.at(topLeftIdx).at(0));
+        pts_dst.push_back(markerCorners.at(topRightIdx).at(1));
+        pts_dst.push_back(markerCorners.at(bottomRightIdx).at(2));
+        pts_dst.push_back(markerCorners.at(bottomLeftIdx).at(3));
+
+
+
+        // 3. Find homography between the two frames
+        cv::Mat h = cv::findHomography(pts_movie, pts_dst);
+        cout << "homog: " << h << endl;
+
+        // 4. Warped the movie frame
+        cv::Mat warpedFrame; // output
+        cv::warpPerspective(movieFrame, warpedFrame, h, srcFrame.size());
+        warpedFrame.copyTo(dstFrame);
+
+        // 5. Prepare a mask representing region to copy from the warped
+        // movie image into the original frame.
+        cv::Mat mask = cv::Mat::zeros(srcFrame.rows, srcFrame.cols, CV_8UC1);
+        cout << "pts_dst size:" << pts_dst.size() << endl;
+
+        // color the mask black
+        cv::fillConvexPoly(mask, pts_dst, cv::Scalar(255, 255, 255),
+                           cv::LINE_AA);
+
+        // 6. Erode the mask to not copy the boundary effects from the
+        // warping
+        cv::Mat element =
+            cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+        cv::erode(mask, mask, element);
+
+        // 7. Copy the masked warped image into the srcFrame in the
+        // mask region.
+        cv::Mat srcMovie = srcFrame.clone();
+        warpedFrame.copyTo(srcMovie, mask);
+
+
+        // 8. output
+        // movieFrame.copyTo(dstFrame);
+        // srcCopy.copyTo(dstFrame);
+
+        // concatenate output
+        cv::Mat concatenatedOutput;
+        cv::hconcat(srcFrame, srcMovie, concatenatedOutput);
+        concatenatedOutput.copyTo(dstFrame);
     }
 }
