@@ -826,13 +826,11 @@ int getIndex(vector<int> v, int K) {
 void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
                         cv::Mat &dstFrame) {
     // 1. get movie corner points (src)
-    // video version
     // cv::Mat movieFrame = cv::imread("res/duck.png");
     std::vector<cv::Point> pts_movie;
-    pts_movie.push_back(cv::Point(0, 0));  // top left then clockwise
+    pts_movie.push_back(cv::Point(0, 0));  // top left
     pts_movie.push_back(cv::Point(movieFrame.rows, 0));
-    pts_movie.push_back(
-        cv::Point(movieFrame.rows, movieFrame.cols));    // bottom right
+    pts_movie.push_back(cv::Point(movieFrame.rows, movieFrame.cols));
     pts_movie.push_back(cv::Point(0, movieFrame.cols));  // bottom left
 
     // 2. get aruco corner points
@@ -844,7 +842,7 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
     cv::Ptr<cv::aruco::Dictionary> dictionary =
         cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
 
-    // -detect aruco
+    // - detect aruco
     cv::aruco::detectMarkers(srcFrame, dictionary, markerCorners, markerIds,
                              parameters, rejectedCandidates);
     cout << "\nmarkerCorners size=" << markerCorners.size() << endl;
@@ -854,9 +852,8 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
     // - save the corners we want to map it into
     std::vector<cv::Point> pts_dst;
     if (markerCorners.size() == 4) {
-
-        // 2,3,1,4
-        // push back the corner points
+        // Aruco ID from top left corner clockwise: 2,3,1,4
+        // >>>>>> push back the corner points of original scene
         int topLeftIdx = getIndex(markerIds, 2);
         int topRightIdx = getIndex(markerIds, 3);
         int bottomRightIdx = getIndex(markerIds, 1);
@@ -865,49 +862,47 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
         pts_dst.push_back(markerCorners.at(topRightIdx).at(1));
         pts_dst.push_back(markerCorners.at(bottomRightIdx).at(2));
         pts_dst.push_back(markerCorners.at(bottomLeftIdx).at(3));
+        // >>>>>>
 
-        srcFrame.copyTo(dstFrame);
-        for (int i = 0; i < pts_dst.size(); i++) {
-            cv::circle(dstFrame, pts_dst.at(i), 5,
-                       cv::Scalar(0, 255, 255), 2, 8, 0);
-        }
-
-        // 3. Find homography between the two frames
+        // 4. Find homography between the two frames
         cv::Mat h = cv::findHomography(pts_movie, pts_dst);
         cout << "homog: " << h << endl;
 
-        // 4. Warped the movie frame
-        cv::Mat warpedFrame; // output
-        cv::warpPerspective(movieFrame, warpedFrame, h, srcFrame.size(),   cv::  cv::INTER_CUBIC);
-        warpedFrame.copyTo(dstFrame);
+        // 5. Warped the movie frame
+        cv::Mat warpedMovFrame;  // output
+        cv::warpPerspective(movieFrame, warpedMovFrame, h, srcFrame.size(),
+                            cv::INTER_LINEAR);
+        warpedMovFrame.copyTo(dstFrame);
 
-        // // 5. Prepare a mask representing region to copy from the warped
-        // // movie image into the original frame.
-        // cv::Mat mask = cv::Mat::zeros(srcFrame.rows, srcFrame.cols, CV_8UC1);
-        // cout << "pts_dst size:" << pts_dst.size() << endl;
+        // 6. Prepare a mask representing region to copy from the warped
+        // movie image into the original frame.
+        cv::Mat mask = cv::Mat::zeros(srcFrame.rows, srcFrame.cols, CV_8UC1);
 
-        // // color the mask black
-        // cv::fillConvexPoly(mask, pts_dst, cv::Scalar(255, 255, 255),
-        //                    cv::LINE_AA);
+        // color the mask white on the Aruco area
+        cv::fillConvexPoly(mask, pts_dst, cv::Scalar(255, 255, 255),
+                           cv::LINE_AA);
 
-        // // 6. Erode the mask to not copy the boundary effects from the
-        // // warping
-        // cv::Mat element =
-        //     cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
-        // cv::erode(mask, mask, element);
+        // 7. Erode the mask to not copy the boundary effects from the
+        // warping
+        cv::Mat element =
+            cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+        cv::erode(mask, mask, element);
 
-        // // 7. Copy the masked warped image into the srcFrame in the
-        // // mask region.
-        // cv::Mat srcMovie = srcFrame.clone();
-        // warpedFrame.copyTo(srcMovie, mask);
+        // 8. Copy the masked warped image into the srcFrame in the
+        // mask region.
+        cv::Mat srcWithMovie = srcFrame.clone();
+        warpedMovFrame.copyTo(srcWithMovie, mask);
 
-        // // 8. output
-        // // movieFrame.copyTo(dstFrame);
-        // // srcCopy.copyTo(dstFrame);
+        // 9. output
+        // draw circle on src frame
+        for (int i = 0; i < pts_dst.size(); i++) {
+            cv::circle(srcFrame, pts_dst.at(i), 5, cv::Scalar(0, 255, 255), 2,
+                       8, 0);
+        }
 
-        // // concatenate output
-        // cv::Mat concatenatedOutput;
-        // cv::hconcat(srcFrame, srcMovie, concatenatedOutput);
-        // concatenatedOutput.copyTo(dstFrame);
+        // concatenate output
+        cv::Mat concatenatedOutput;
+        cv::hconcat(srcFrame, srcWithMovie, concatenatedOutput);
+        concatenatedOutput.copyTo(dstFrame);
     }
 }
