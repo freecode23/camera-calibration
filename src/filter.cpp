@@ -826,7 +826,7 @@ int getIndex(vector<int> v, int K) {
 void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
                         cv::Mat &dstFrame) {
     // 1. get movie corner points (src)
-    // cv::Mat movieFrame = cv::imread("res/duck.png");
+    // movieFrame = cv::imread("res/duck.png");
     std::vector<cv::Point> pts_movie;
     pts_movie.push_back(cv::Point(0, 0));  // top left
     pts_movie.push_back(cv::Point(movieFrame.rows, 0));
@@ -904,5 +904,8 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
         cv::Mat concatenatedOutput;
         cv::hconcat(srcFrame, srcWithMovie, concatenatedOutput);
         concatenatedOutput.copyTo(dstFrame);
+        srcWithMovie.copyTo(dstFrame);
+
+
     }
 }

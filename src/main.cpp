@@ -63,7 +63,7 @@ int videoMode() {
 
     // 3. Create video writer object filename, format, size
     cv::VideoWriter output(
-        "myout.avi", cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 5, refS);
+        "myout.avi", cv::CAP_OPENCV_MJPEG, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30, refS);
 
     cv::namedWindow("Video", 1);  // 4. identifies a window
     cv::Mat srcFrame;             // 5. create srcFrame to display
