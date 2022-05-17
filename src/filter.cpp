@@ -625,8 +625,8 @@ void draw3DAxesOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
 
 // Task 6
 void drawPolygonOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
-                                    cv::Mat &distortCoeff, cv::Mat &rotVec,
-                                    cv::Mat &transVec) {
+                             cv::Mat &distortCoeff, cv::Mat &rotVec,
+                             cv::Mat &transVec) {
     vector<cv::Point3f> lines;
     // 0.73156748, 0.77794309, 0.42523719], [0.62113842, 0.87886158,
     // 0.12113842], [0.77794309, 0.92523719, 0.26843252], [0.57476281,
@@ -732,10 +732,10 @@ int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
     return (0);
 }
 
-
 // Extension 1
-void readObjFile(const std::string &file_path, std::vector<cv::Point3f> &vertices,
-              std::vector<std::vector<int>> &faces) {
+void readObjFile(const std::string &file_path,
+                 std::vector<cv::Point3f> &vertices,
+                 std::vector<std::vector<int>> &faces) {
     // try read
     std::ifstream file(file_path);
     if (!file.good()) {
@@ -779,28 +779,29 @@ void readObjFile(const std::string &file_path, std::vector<cv::Point3f> &vertice
     }
 }
 
-void drawVirtualObjectOnChessboard(cv::Mat &srcFrame,
-                cv::Mat &rotVec, cv::Mat &transVec, cv::Mat &calibMatrix,
-                cv::Mat &distortCoeff, vector<cv::Point3f> &vertices,
-                vector<vector<int>> &faces) {
-
+void drawVirtualObjectOnChessboard(cv::Mat &srcFrame, cv::Mat &rotVec,
+                                   cv::Mat &transVec, cv::Mat &calibMatrix,
+                                   cv::Mat &distortCoeff,
+                                   vector<cv::Point3f> &vertices,
+                                   vector<vector<int>> &faces) {
     // result 2D points
     vector<cv::Point2f> points2D;
 
     cv::projectPoints(vertices, rotVec, transVec, calibMatrix, distortCoeff,
                       points2D);
 
-    draw3DAxesOnChessboard(srcFrame, calibMatrix, distortCoeff, rotVec, transVec);
+    draw3DAxesOnChessboard(srcFrame, calibMatrix, distortCoeff, rotVec,
+                           transVec);
 
     for (std::vector<int> &face : faces) {
-        cv::line(srcFrame, points2D[face[0] - 1],
-                 points2D[face[1] - 1], cv::Scalar(0, 255, 0), 1);
+        cv::line(srcFrame, points2D[face[0] - 1], points2D[face[1] - 1],
+                 cv::Scalar(0, 255, 0), 1);
 
-        cv::line(srcFrame, points2D[face[1] - 1],
-                 points2D[face[2] - 1], cv::Scalar(0, 255, 0), 1);
+        cv::line(srcFrame, points2D[face[1] - 1], points2D[face[2] - 1],
+                 cv::Scalar(0, 255, 0), 1);
 
-        cv::line(srcFrame, points2D[face[2] - 1],
-                 points2D[face[0] - 1], cv::Scalar(0, 255, 0), 1);
+        cv::line(srcFrame, points2D[face[2] - 1], points2D[face[0] - 1],
+                 cv::Scalar(0, 255, 0), 1);
     }
 }
 
@@ -847,28 +848,12 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
     cv::aruco::detectMarkers(srcFrame, dictionary, markerCorners, markerIds,
                              parameters, rejectedCandidates);
     cout << "\nmarkerCorners size=" << markerCorners.size() << endl;
+    cv::aruco::drawDetectedMarkers(srcFrame, markerCorners, markerIds);
+    srcFrame.copyTo(dstFrame);
 
     // - save the corners we want to map it into
     std::vector<cv::Point> pts_dst;
     if (markerCorners.size() == 4) {
-        for (int i = 0; i < markerCorners.size(); i++) {
-            int cornerToCircle;
-            if (markerIds.at(i) == 1) {
-                cornerToCircle = 2;
-
-            } else if (markerIds.at(i) == 2) {
-                cornerToCircle = 0;
-
-            } else if (markerIds.at(i) == 3) {
-                cornerToCircle = 1;
-
-            } else if (markerIds.at(i) == 4) {
-                cornerToCircle = 3;
-            }
-            srcFrame.copyTo(dstFrame);
-            cv::circle(dstFrame, markerCorners.at(i).at(cornerToCircle), 5,
-                       cv::Scalar(0, 255, 255), 2, 8, 0);
-        }
 
         // 2,3,1,4
         // push back the corner points
@@ -881,7 +866,11 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
         pts_dst.push_back(markerCorners.at(bottomRightIdx).at(2));
         pts_dst.push_back(markerCorners.at(bottomLeftIdx).at(3));
 
-
+        srcFrame.copyTo(dstFrame);
+        for (int i = 0; i < pts_dst.size(); i++) {
+            cv::circle(dstFrame, pts_dst.at(i), 5,
+                       cv::Scalar(0, 255, 255), 2, 8, 0);
+        }
 
         // 3. Find homography between the two frames
         cv::Mat h = cv::findHomography(pts_movie, pts_dst);
@@ -889,37 +878,36 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
 
         // 4. Warped the movie frame
         cv::Mat warpedFrame; // output
-        cv::warpPerspective(movieFrame, warpedFrame, h, srcFrame.size());
+        cv::warpPerspective(movieFrame, warpedFrame, h, srcFrame.size(),   cv::  cv::INTER_CUBIC);
         warpedFrame.copyTo(dstFrame);
 
-        // 5. Prepare a mask representing region to copy from the warped
-        // movie image into the original frame.
-        cv::Mat mask = cv::Mat::zeros(srcFrame.rows, srcFrame.cols, CV_8UC1);
-        cout << "pts_dst size:" << pts_dst.size() << endl;
+        // // 5. Prepare a mask representing region to copy from the warped
+        // // movie image into the original frame.
+        // cv::Mat mask = cv::Mat::zeros(srcFrame.rows, srcFrame.cols, CV_8UC1);
+        // cout << "pts_dst size:" << pts_dst.size() << endl;
 
-        // color the mask black
-        cv::fillConvexPoly(mask, pts_dst, cv::Scalar(255, 255, 255),
-                           cv::LINE_AA);
+        // // color the mask black
+        // cv::fillConvexPoly(mask, pts_dst, cv::Scalar(255, 255, 255),
+        //                    cv::LINE_AA);
 
-        // 6. Erode the mask to not copy the boundary effects from the
-        // warping
-        cv::Mat element =
-            cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
-        cv::erode(mask, mask, element);
+        // // 6. Erode the mask to not copy the boundary effects from the
+        // // warping
+        // cv::Mat element =
+        //     cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+        // cv::erode(mask, mask, element);
 
-        // 7. Copy the masked warped image into the srcFrame in the
-        // mask region.
-        cv::Mat srcMovie = srcFrame.clone();
-        warpedFrame.copyTo(srcMovie, mask);
+        // // 7. Copy the masked warped image into the srcFrame in the
+        // // mask region.
+        // cv::Mat srcMovie = srcFrame.clone();
+        // warpedFrame.copyTo(srcMovie, mask);
 
+        // // 8. output
+        // // movieFrame.copyTo(dstFrame);
+        // // srcCopy.copyTo(dstFrame);
 
-        // 8. output
-        // movieFrame.copyTo(dstFrame);
-        // srcCopy.copyTo(dstFrame);
-
-        // concatenate output
-        cv::Mat concatenatedOutput;
-        cv::hconcat(srcFrame, srcMovie, concatenatedOutput);
-        concatenatedOutput.copyTo(dstFrame);
+        // // concatenate output
+        // cv::Mat concatenatedOutput;
+        // cv::hconcat(srcFrame, srcMovie, concatenatedOutput);
+        // concatenatedOutput.copyTo(dstFrame);
     }
 }
