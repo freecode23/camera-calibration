@@ -732,8 +732,17 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/stitching/detail/blenders.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video.hpp \
   /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video/tracking.hpp \
-  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video/background_segm.hpp
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video/background_segm.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/calib3d/calib3d.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/features2d/features2d.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/highgui/highgui.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/xfeatures2d.hpp \
+  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/xfeatures2d/nonfree.hpp
 
+
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/xfeatures2d.hpp:
+
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/calib3d/calib3d.hpp:
 
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/viz/vizcore.hpp:
 
@@ -827,6 +836,8 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
 
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/flann/defines.h:
 
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/highgui/highgui.hpp:
+
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/flann/miniflann.hpp:
 
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/features2d.hpp:
@@ -918,6 +929,8 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/c++/v1/cfloat:
 
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/matx.hpp:
+
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/xfeatures2d/nonfree.hpp:
 
 /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/core/vsx_utils.hpp:
 
@@ -1128,6 +1141,8 @@ CMakeFiles/calib.dir/src/main.cpp.o: src/main.cpp \
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/alloca.h:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/runetype.h:
+
+/opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/features2d/features2d.hpp:
 
 /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk/usr/include/time.h:
 

@@ -735,4 +735,9 @@ CMakeFiles/calib.dir/src/main.cpp.o
  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video.hpp
  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video/tracking.hpp
  /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/video/background_segm.hpp
+ /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/calib3d/calib3d.hpp
+ /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/features2d/features2d.hpp
+ /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/highgui/highgui.hpp
+ /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/xfeatures2d.hpp
+ /opt/homebrew/Cellar/opencv/4.5.5_2/include/opencv4/opencv2/xfeatures2d/nonfree.hpp
 

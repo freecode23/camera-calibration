@@ -597,7 +597,7 @@ void draw2DLines(cv::Mat &srcFrame, cv::Point3f origin_3D, cv::Point3f dst_3D,
                         cv::LINE_8, 0, 0.1);
     } else {
         cv::line(srcFrame, vec2D.at(0), vec2D.at(1), color, thickness,
-                        cv::LINE_8);
+                 cv::LINE_8);
     }
 }
 
@@ -642,7 +642,8 @@ void drawVirttualObjectOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
     for (int i = 0; i < lines.size(); i++) {
         for (int j = 0; j < lines.size(); j++) {
             draw2DLines(srcFrame, lines.at(i), lines.at(j), calibMatrix,
-                        distortCoeff, rotVec, transVec, cv::Scalar(255, 0, 0), false);
+                        distortCoeff, rotVec, transVec, cv::Scalar(255, 0, 0),
+                        false);
         }
     }
 }
@@ -741,4 +742,74 @@ int read2d3DVectorsFromCSV(char *src_csv, cv::Size chessboardSize,
     fclose(fp);
     printf("Finished reading CSV file\n");
     return (0);
+}
+
+void read_obj(const std::string &file_path, std::vector<cv::Point3f> &vertices,
+              std::vector<std::vector<int>> &faces) {
+    // try read
+    std::ifstream file(file_path);
+    if (!file.good()) {
+        std::cout << "file does not exists" << std::endl;
+        exit(-1);
+    }
+
+    // start reading
+    std::vector<std::string> values;
+    std::string line;
+    while (std::getline(file, line)) {
+        values.clear();
+
+        std::stringstream ss(line);
+
+        // split line
+        while (ss.good()) {
+            std::string substr;
+            std::getline(ss, substr, ' ');
+            if (!substr.empty()) values.push_back(substr);
+        }
+
+        if (values.empty()) {
+            continue;
+        }
+
+        if (values.at(0) == "v") {
+            float x = stof(values.at(1));
+            float y = stof(values.at(2));
+            float z = stof(values.at(3));
+
+            vertices.push_back(cv::Point3f(x + 5, y - 5, z + 5));
+
+        } else if (values.at(0) == "f") {
+
+            faces.push_back({std::stoi(values.at(1)), std::stoi(values.at(2)),
+                             std::stoi(values.at(3))});
+        } else {
+            std::cout << "skip" << std::endl;
+            // exit(-1);
+        }
+    }
+}
+
+void drawObject(cv::Mat &rotVec, cv::Mat &transVec, cv::Mat &calibMatrix,
+                cv::Mat &distortCoeff, vector<cv::Point3f> &vertices,
+                vector<vector<int>> &faces, cv::Mat &frame) {
+    // result 2D points
+    vector<cv::Point2f> object_image_points;
+
+    cv::projectPoints(vertices, rotVec, transVec, calibMatrix, distortCoeff,
+                      object_image_points);
+    cout << "finish project points " << endl;
+
+    draw3DAxesOnChessboard(frame, calibMatrix, distortCoeff, rotVec, transVec);
+
+    for (std::vector<int> &face : faces) {
+        cv::line(frame, object_image_points[face[0] - 1],
+                 object_image_points[face[1] - 1], cv::Scalar(0, 255, 0), 1);
+
+        cv::line(frame, object_image_points[face[1] - 1],
+                 object_image_points[face[2] - 1], cv::Scalar(0, 255, 0), 1);
+
+        cv::line(frame, object_image_points[face[2] - 1],
+                 object_image_points[face[0] - 1], cv::Scalar(0, 255, 0), 1);
+    }
 }

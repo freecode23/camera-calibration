@@ -8,6 +8,14 @@
 #include <vector>
 
 #include "filter.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/calib3d/calib3d.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/xfeatures2d.hpp"
 using namespace std;
 
 enum filter {
@@ -21,7 +29,9 @@ enum filter {
     opProject,
     opVirtualObject,
     opHarris,
-    opDetectAruco
+    opDetectAruco,
+    opRobust,
+    opMatch
 };
 
 int videoMode() {
@@ -35,9 +45,9 @@ int videoMode() {
         return (-1);
     }
     capdev->set(cv::CAP_PROP_FRAME_WIDTH,
-                800);  // Setting the width of the video
+                600);  // Setting the width of the video
     capdev->set(cv::CAP_PROP_FRAME_HEIGHT,
-                600);  // Setting the height of the video//
+                400);  // Setting the height of the video//
 
     // 2. Get video resolution and create a size object
 
@@ -75,6 +85,12 @@ int videoMode() {
     cv::Mat calibMatrix;   // 3X3 matrix
     cv::Mat distortCoeff;  // 1X5 matrix
 
+    vector<cv::Point3f> vertices;
+    std::vector<std::vector<int>> faces;
+    float x_shift;
+    float y_shift;
+    read_obj("res/shuttle.obj", vertices, faces);
+
     for (;;) {
         *capdev >>
             srcFrame;  // 6. get a new frame from the camera, treat as a stream
@@ -92,7 +108,7 @@ int videoMode() {
         // 7. Execute operation
         if (op == opDrawOnChessboard) {
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
-
+            cout << "corners found: " << imagePoints.size() << endl;
         } else if (op == opSaveImageWorldPoints) {
             // - draw last one
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
@@ -183,6 +199,7 @@ int videoMode() {
             }
 
         } else if (op == opVirtualObject) {
+
             // 1. get image points
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
 
@@ -208,17 +225,16 @@ int videoMode() {
             int apertureSize = 3;
             double k = 0.04;
             cv::Mat srcGray;
-            int thresh = 190;
+            int thresh = 120;
             int MAX_THRESH = 255;
 
             // 1. convert src to gray
             cv::cvtColor(srcFrame, srcGray, cv::COLOR_BGR2GRAY);
 
-            // 2. get harris corner 
+            // 2. get harris corner
             cv::Mat corners = cv::Mat::zeros(srcFrame.size(), CV_32FC1);
 
-            cout << "here" << endl;
-            cv::cornerHarris(srcGray, corners, blockSize, apertureSize, k, cv::BORDER_DEFAULT);
+            cv::cornerHarris(srcGray, corners, blockSize, apertureSize, k);
 
             cv::Mat corners_norm, corners_norm_scaled;
             cv::normalize(corners, corners_norm, 0, 255, cv::NORM_MINMAX,
@@ -226,39 +242,90 @@ int videoMode() {
             cv::convertScaleAbs(corners_norm, corners_norm_scaled);
 
             srcFrame.copyTo(dstFrame);
-     
+
             for (int i = 0; i < corners_norm.rows; i++) {
                 for (int j = 0; j < corners_norm.cols; j++) {
                     if ((int)corners_norm.at<float>(i, j) > thresh) {
                         // draw circle
                         cv::circle(dstFrame, cv::Point(j, i), 5,
-                                   cv::Scalar(0,0,255), 2, 8, 0);
-                    } 
+                                   cv::Scalar(0, 0, 255), 2, 8, 0);
+                    }
                 }
             }
             // cout << "finishcorner harris" << endl;
 
-        } else if (op == opDetectAruco) {
+        } else if (op == opRobust) {
+            cv::Mat srcGray;
+            // convert image to grey scale
+            cv::cvtColor(srcFrame, srcGray, cv::COLOR_BGR2GRAY);
+            std::vector<cv::KeyPoint> keypoints;
 
+            // 1. SIFT
+            // create sift Ptr and keypoints to
+            // cv::Ptr<cv::SIFT> siftPtr = cv::SIFT::create(0, 3, 0.04,
+            // 12, 1.6); siftPtr->detect(srcGray, keypoints);
+
+            // 2. FAST
+            cv::Ptr<cv::FastFeatureDetector> fastPtr =
+                cv::FastFeatureDetector::create(
+                    30, true, cv::FastFeatureDetector::TYPE_9_16);
+            fastPtr->setNonmaxSuppression(false);
+            fastPtr->detect(srcGray, keypoints);
+
+            // 3. ORB
+            // const int MAX_FEATURES = 500;
+            // cv::Mat descriptors;
+            // cv::Ptr<cv::Feature2D> orbPtr = cv::ORB::create();
+            // orbPtr->detectAndCompute(srcGray, cv::Mat(), keypoints,
+            // descriptors);
+
+            cv::drawKeypoints(srcGray, keypoints, dstFrame, cv::Scalar::all(-1),
+                              cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+
+
+        } else if (op == opDetectAruco) {
             // - set variables
-            cv::Mat srcFlipped;
             std::vector<int> markerIds;
-            std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
-            cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
-            cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+            std::vector<std::vector<cv::Point2f>> markerCorners,
+                rejectedCandidates;
+            cv::Ptr<cv::aruco::DetectorParameters> parameters =
+                cv::aruco::DetectorParameters::create();
+            cv::Ptr<cv::aruco::Dictionary> dictionary =
+                cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
 
             // -detect
-            cv::flip(srcFrame,srcFlipped,1);
-            cv::aruco::detectMarkers(srcFlipped, dictionary, markerCorners,
+            cv::aruco::detectMarkers(srcFrame, dictionary, markerCorners,
                                      markerIds, parameters, rejectedCandidates);
 
             cout << "markerCorners size=" << markerCorners.size() << endl;
 
-            // - draw 
-
-            cv::flip(srcFlipped, srcFrame,1);
+            // - draw
             srcFrame.copyTo(dstFrame);
             cv::aruco::drawDetectedMarkers(dstFrame, markerCorners, markerIds);
+
+        } else if (op == opMatch) {
+
+            // 1. get image points
+            drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
+
+            // 2. get rVec and tVec
+            cv::Mat rotVec(3, 1, cv::DataType<double>::type);
+            cv::Mat transVec(3, 1, cv::DataType<double>::type);
+
+            if (getCameraPosition(chessboardSize, worldPoints, imagePoints,
+                                  calibMatrix, distortCoeff, rotVec,
+                                  transVec)) {
+
+                drawObject(rotVec, transVec, calibMatrix,
+                           distortCoeff, vertices, faces, srcFrame);
+
+                srcFrame.copyTo(dstFrame);
+            } else {
+                cout << "No camera with chessboard detected. Press \'P\' again "
+                        "once you put your chessboard in front of camera"
+                     << endl;
+                op = none;
+            }
 
         } else {  // op == none
             srcFrame.copyTo(dstFrame);
@@ -309,6 +376,12 @@ int videoMode() {
             cout << "\n>>>>>>>>> aruco.." << endl;
             op = opDetectAruco;
 
+        } else if (key == 'f') {
+            op = opRobust;
+
+        } else if (key == 'm') {
+            op = opMatch;
+
         } else if (key == 32) {
             cout << ">>>>>>>>> reset..." << endl;
             op = none;
@@ -349,12 +422,14 @@ void imageMode() {
             drawOnChessboard(srcImage, dstImage, imagePoints, chessboardSize);
 
         } else if (op == opDetectAruco) {
-
             // opencv method
             std::vector<int> markerIds;
-            std::vector<std::vector<cv::Point2f>> markerCorners, rejectedCandidates;
-            cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
-            cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+            std::vector<std::vector<cv::Point2f>> markerCorners,
+                rejectedCandidates;
+            cv::Ptr<cv::aruco::DetectorParameters> parameters =
+                cv::aruco::DetectorParameters::create();
+            cv::Ptr<cv::aruco::Dictionary> dictionary =
+                cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
 
             // detect
             cv::aruco::detectMarkers(srcImage, dictionary, markerCorners,
@@ -411,21 +486,20 @@ int main(int argc, char *argv[]) {
     }
 }
 
+// >> 1. Create Aruco marker
+// cv::Mat markerImage;
 
-            // >> 1. Create Aruco marker
-            // cv::Mat markerImage;
+// // 1. Load the prefefined dictionary of 25o markers
+// // Each marker containts a 6X6 binary pattern
+// cv::Ptr<cv::aruco::Dictionary> dictionary =
+//     cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
 
-            // // 1. Load the prefefined dictionary of 25o markers
-            // // Each marker containts a 6X6 binary pattern
-            // cv::Ptr<cv::aruco::Dictionary> dictionary =
-            //     cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250);
+// // 2. Generate the marker
+// for (int i = 1; i < 5; i++) {
+//     cv::aruco::drawMarker(dictionary, i, 200, markerImage, 1);
+//     string name = "marker" + std::to_string(i) + "_";
+//     saveImage(markerImage, name);
+// }
 
-            // // 2. Generate the marker
-            // for (int i = 1; i < 5; i++) {
-            //     cv::aruco::drawMarker(dictionary, i, 200, markerImage, 1);
-            //     string name = "marker" + std::to_string(i) + "_";
-            //     saveImage(markerImage, name);
-            // }
-
-            // // 3. save image
-            // op = none;
+// // 3. save image
+// op = none;
