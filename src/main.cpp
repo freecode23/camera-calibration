@@ -4,8 +4,9 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
-#include <vector>
 #include <opencv2/aruco.hpp>
+#include <vector>
+
 #include "filter.hpp"
 #include "opencv2/calib3d.hpp"
 #include "opencv2/features2d.hpp"
@@ -30,7 +31,6 @@ enum filter {
     opFast,
     opVirtualObj
 };
-
 
 int videoMode() {
     cv::VideoCapture *capdev;
@@ -62,8 +62,9 @@ int videoMode() {
     printf("Expected size: %d %d\n", refS.width, refS.height);
 
     // 3. Create video writer object filename, format, size
-    cv::VideoWriter output(
-        "myout.avi", cv::CAP_OPENCV_MJPEG, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30, refS);
+    cv::VideoWriter output("myout.avi", cv::CAP_OPENCV_MJPEG,
+                           cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 30,
+                           refS, true);
 
     cv::namedWindow("Video", 1);  // 4. identifies a window
     cv::Mat srcFrame;             // 5. create srcFrame to display
@@ -91,13 +92,13 @@ int videoMode() {
 
     cv::Mat calibMatrix;   // 3X3 matrix
     cv::Mat distortCoeff;  // 1X5 matrix
-
     vector<cv::Point3f> vertices;
     std::vector<std::vector<int>> faces;
+
     float x_shift;
     float y_shift;
-    readObjFile("res/shuttle.obj", vertices, faces);
-
+    // readObjFile("res/shuttle.obj", vertices, faces);
+    char intInput;
     for (;;) {
         // 1. get a new frame from the camera, treat as a stream
         *capdev >> srcFrame;
@@ -216,8 +217,8 @@ int videoMode() {
             if (getCameraPosition(chessboardSize, worldPoints, imagePoints,
                                   calibMatrix, distortCoeff, rotVec,
                                   transVec)) {
-                drawPolygonOnChessboard(srcFrame, calibMatrix,
-                                               distortCoeff, rotVec, transVec);
+                drawPolygonOnChessboard(srcFrame, calibMatrix, distortCoeff,
+                                        rotVec, transVec);
                 srcFrame.copyTo(dstFrame);
             } else {
                 cout << "No camera with chessboard detected. Press \'P\' again "
@@ -299,6 +300,7 @@ int videoMode() {
             createMovieOnAruco(srcFrame, movieFrame, dstFrame);
 
         } else if (op == opVirtualObj) {
+        
             // 1. get image points
             drawOnChessboard(srcFrame, dstFrame, imagePoints, chessboardSize);
 
@@ -309,11 +311,14 @@ int videoMode() {
             if (getCameraPosition(chessboardSize, worldPoints, imagePoints,
                                   calibMatrix, distortCoeff, rotVec,
                                   transVec)) {
-                drawVirtualObjectOnChessboard(srcFrame,rotVec, transVec, calibMatrix, distortCoeff, vertices, faces);
+                drawVirtualObjectOnChessboard(srcFrame, rotVec, transVec,
+                                              calibMatrix, distortCoeff,
+                                              vertices, faces);
 
                 srcFrame.copyTo(dstFrame);
             } else {
-                cout << "No camera with chessboard detected. Press \'P\' again "
+                cout << "No camera with chessboard detected. Press \'1, 2, or 3\' "
+                        "again "
                         "once you put your chessboard in front of camera"
                      << endl;
                 op = none;
@@ -372,10 +377,31 @@ int videoMode() {
             cout << "fast corner detection.." << endl;
             op = opFast;
 
-        } else if (key == 'o') {
+        } else if (key == '1') {
+            cout << "\n>>>>>>>>> draw virtual object from obj file..." << endl;
+            op = opVirtualObj;
+            cout << "one 1" << endl;
+   
+            vertices.clear();
+            faces.clear();
+            readObjFile("res/shuttle.obj", vertices, faces);
+        } else if (key == '2') {
             cout << "\n>>>>>>>>> draw virtual object from obj file..." << endl;
             op = opVirtualObj;
 
+            cout << "two 2" << endl;
+            vertices.clear();
+            faces.clear();
+            readObjFile("res/cow.obj", vertices, faces);
+
+        } else if (key == '3') {
+            cout << "\n>>>>>>>>> draw virtual object from obj file..." << endl;
+            op = opVirtualObj;
+            cout << "three 3" << endl;
+
+            vertices.clear();
+            faces.clear();
+            readObjFile("res/plane.obj", vertices, faces);
         } else if (key == 32) {
             cout << ">>>>>>>>> reset..." << endl;
             op = none;

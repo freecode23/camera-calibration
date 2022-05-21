@@ -2,7 +2,7 @@
 // FILE: filter.cpp
 //
 // DESCRIPTION
-// Contains implementation for applying filter to image
+// Contains implementation for processing video frame
 //
 // AUTHOR
 // Sherly Hartono
@@ -16,72 +16,9 @@
 #include <string>  //used for strings
 using namespace std;
 
-void blur5x5(cv::Mat &src, cv::Mat &dst) {
-    // 1. Create intermediate frame for storing h filter result
-    cv::Mat inter;
-    src.copyTo(inter);
-
-    // 2. H filter:
-    // Loop pixels and apply horizontal filter
-    // loop over all rows
-    uint8_t *srcPtr = (uint8_t *)src.data;
-    uint8_t *interPtr = (uint8_t *)inter.data;
-    for (int i = 0; i < src.rows; i++) {
-        // loop over columns -2 (j =2)
-        for (int j = 2; j < src.cols - 2; j++) {
-            cv::Vec3i res16bit = {0, 0, 0};
-
-            // loop over color channel
-            for (int ch = 0; ch < 3; ch++) {
-                // apply filter
-                res16bit[ch] =
-                    srcPtr[(i * src.cols * 3) + ((j - 2) * 3) + ch] * 1 +
-                    srcPtr[(i * src.cols * 3) + ((j - 1) * 3) + ch] * 2 +
-                    srcPtr[(i * src.cols * 3) + ((j)*3) + ch] * 4 +
-                    srcPtr[(i * src.cols * 3) + ((j + 1) * 3) + ch] * 2 +
-                    srcPtr[(i * src.cols * 3) + ((j + 2) * 3) + ch] * 1;
-
-                res16bit /= 10;  // normalise
-                // convert to 8 bit and assign to intermediate result
-                interPtr[i * inter.cols * 3 + j * 3 + ch] =
-                    (unsigned char)res16bit[ch];
-            }
-        }
-    }
-    inter.copyTo(dst);
-    uint8_t *dstPtr = (uint8_t *)dst.data;
-
-    // 4. V filter:
-    // Loop pixels and apply vertical filter to the resulting horizonal filter
-    // loop over all rows -2
-    for (int i = 2; i < inter.rows - 2; i++) {
-        // loop over all columns
-        for (int j = 0; j < inter.cols; j++) {
-            cv::Vec3i res16bit = {0, 0, 0};
-            cv::Vec3b res8bit;  // result at this i,j pixel
-
-            // loop over color channel
-            for (int ch = 0; ch < 3; ch++) {
-                // apply filter
-                res16bit[ch] =
-                    interPtr[((i - 2) * inter.cols * 3) + (j * 3) + ch] * 1 +
-                    interPtr[((i - 1) * inter.cols * 3) + (j * 3) + ch] * 2 +
-                    interPtr[((i)*inter.cols * 3) + (j * 3) + ch] * 4 +
-                    interPtr[((i + 1) * inter.cols * 3) + (j * 3) + ch] * 2 +
-                    interPtr[((i + 2) * inter.cols * 3) + (j * 3) + ch] * 1;
-
-                res16bit /= 10;                             // normalise
-                res8bit[ch] = (unsigned char)res16bit[ch];  // convert to 8 bit
-                dstPtr[i * dst.cols * 3 + j * 3 + ch] = res8bit[ch];  // assign
-            }
-            // out of for loop. we finish calculating the pixel per color
-            // channel
-        }
-    }
-}
-
+// >>>>>>>>>>> Helper functions
 /*
-  reads a string from a CSV file fp. the 0-terminated string is returned in the
+  Reads a string from a CSV file fp. the 0-terminated string is returned in the
   char array os. The function returns false if it is successfully read. It
   returns true if it reaches the end of the line or the file.
  */
@@ -772,10 +709,7 @@ void readObjFile(const std::string &file_path,
         } else if (values.at(0) == "f") {
             faces.push_back({std::stoi(values.at(1)), std::stoi(values.at(2)),
                              std::stoi(values.at(3))});
-        } else {
-            std::cout << "skip" << std::endl;
-            // exit(-1);
-        }
+        } 
     }
 }
 
@@ -829,9 +763,9 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
     // movieFrame = cv::imread("res/duck.png");
     std::vector<cv::Point> pts_movie;
     pts_movie.push_back(cv::Point(0, 0));  // top left
-    pts_movie.push_back(cv::Point(movieFrame.rows, 0));
-    pts_movie.push_back(cv::Point(movieFrame.rows, movieFrame.cols));
-    pts_movie.push_back(cv::Point(0, movieFrame.cols));  // bottom left
+    pts_movie.push_back(cv::Point(movieFrame.cols, 0)); // top right
+    pts_movie.push_back(cv::Point(movieFrame.cols, movieFrame.rows)); // bottom right
+    pts_movie.push_back(cv::Point(0, movieFrame.rows));  // bottom left
 
     // 2. get aruco corner points
     // - set variables
@@ -845,8 +779,7 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
     // - detect aruco
     cv::aruco::detectMarkers(srcFrame, dictionary, markerCorners, markerIds,
                              parameters, rejectedCandidates);
-    cout << "\nmarkerCorners size=" << markerCorners.size() << endl;
-    cv::aruco::drawDetectedMarkers(srcFrame, markerCorners, markerIds);
+    // cv::aruco::drawDetectedMarkers(srcFrame, markerCorners, markerIds);
     srcFrame.copyTo(dstFrame);
 
     // - save the corners we want to map it into
@@ -866,13 +799,12 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
 
         // 4. Find homography between the two frames
         cv::Mat h = cv::findHomography(pts_movie, pts_dst);
-        cout << "homog: " << h << endl;
 
         // 5. Warped the movie frame
         cv::Mat warpedMovFrame;  // output
         cv::warpPerspective(movieFrame, warpedMovFrame, h, srcFrame.size(),
                             cv::INTER_LINEAR);
-        warpedMovFrame.copyTo(dstFrame);
+        // warpedMovFrame.copyTo(dstFrame);
 
         // 6. Prepare a mask representing region to copy from the warped
         // movie image into the original frame.
@@ -904,7 +836,7 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
         cv::Mat concatenatedOutput;
         cv::hconcat(srcFrame, srcWithMovie, concatenatedOutput);
         concatenatedOutput.copyTo(dstFrame);
-        srcWithMovie.copyTo(dstFrame);
+        // srcWithMovie.copyTo(dstFrame);
 
 
     }
