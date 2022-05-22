@@ -147,7 +147,6 @@ void drawOnChessboard(cv::Mat &src, cv::Mat &dst,
     // accurate location
     src.copyTo(dst);
     if (found) {
-        // cout << "found" << endl;
         cv::Size winSize = cv::Size(5, 5);
         cv::Size zeroZone = cv::Size(-1, -1);
         cv::cornerSubPix(srcGray, outputImagePoints, winSize, zeroZone,
@@ -524,7 +523,7 @@ void draw2DLines(cv::Mat &srcFrame, cv::Point3f origin_3D, cv::Point3f dst_3D,
     vec2D.push_back(origin_2D);
     vec2D.push_back(dst_2D);
 
-    // project the 3D
+    // project the 3D to get 2D output
     cv::projectPoints(vec3D, rotVec, transVec, calibMatrix, distortCoeff,
                       vec2D);
 
@@ -549,12 +548,12 @@ void draw3DAxesOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
     draw2DLines(srcFrame, origin_3D, x_3D, calibMatrix, distortCoeff, rotVec,
                 transVec, cv::Scalar(255, 0, 0), true);
 
-    // Y AXes
+    // Y Axes
     cv::Point3f y_3D = cv::Point3f(0, -6, 0);
     draw2DLines(srcFrame, origin_3D, y_3D, calibMatrix, distortCoeff, rotVec,
                 transVec, cv::Scalar(0, 255, 0), true);
 
-    // Z AXes
+    // Z Axes
     cv::Point3f z_3D = cv::Point3f(0, 0, 6);
     draw2DLines(srcFrame, origin_3D, z_3D, calibMatrix, distortCoeff, rotVec,
                 transVec, cv::Scalar(0, 0, 255), true);
@@ -709,7 +708,7 @@ void readObjFile(const std::string &file_path,
         } else if (values.at(0) == "f") {
             faces.push_back({std::stoi(values.at(1)), std::stoi(values.at(2)),
                              std::stoi(values.at(3))});
-        } 
+        }
     }
 }
 
@@ -717,24 +716,25 @@ void drawVirtualObjectOnChessboard(cv::Mat &srcFrame, cv::Mat &rotVec,
                                    cv::Mat &transVec, cv::Mat &calibMatrix,
                                    cv::Mat &distortCoeff,
                                    vector<cv::Point3f> &vertices,
-                                   vector<vector<int>> &faces) {
+                                   vector<vector<int>> &faces,
+                                   cv::Mat &dstFrame) {
     // result 2D points
     vector<cv::Point2f> points2D;
 
     cv::projectPoints(vertices, rotVec, transVec, calibMatrix, distortCoeff,
                       points2D);
 
-    draw3DAxesOnChessboard(srcFrame, calibMatrix, distortCoeff, rotVec,
-                           transVec);
+    // draw3DAxesOnChessboard(dstFrame, calibMatrix, distortCoeff, rotVec,
+    //                        transVec);
 
     for (std::vector<int> &face : faces) {
-        cv::line(srcFrame, points2D[face[0] - 1], points2D[face[1] - 1],
+        cv::line(dstFrame, points2D[face[0] - 1], points2D[face[1] - 1],
                  cv::Scalar(0, 255, 0), 1);
 
-        cv::line(srcFrame, points2D[face[1] - 1], points2D[face[2] - 1],
+        cv::line(dstFrame, points2D[face[1] - 1], points2D[face[2] - 1],
                  cv::Scalar(0, 255, 0), 1);
 
-        cv::line(srcFrame, points2D[face[2] - 1], points2D[face[0] - 1],
+        cv::line(dstFrame, points2D[face[2] - 1], points2D[face[0] - 1],
                  cv::Scalar(0, 255, 0), 1);
     }
 }
@@ -757,14 +757,77 @@ int getIndex(vector<int> v, int K) {
     }
 }
 
+void projectMovieOnChessboard(cv::Mat &srcFrame, cv::Mat &rotVec,
+                              cv::Mat &transVec, cv::Mat &calibMatrix,
+                              cv::Mat &distortCoeff, cv::Mat &movieFrame,
+                              cv::Mat &dstFrame) {
+    cout << "project movie on chessboard " << endl;
+    // 1. Get movie corner points (2D)
+    std::vector<cv::Point> pts_movie;
+    pts_movie.push_back(cv::Point(0, 0));                // top left
+    pts_movie.push_back(cv::Point(movieFrame.cols, 0));  // top right
+    pts_movie.push_back(
+        cv::Point(movieFrame.cols, movieFrame.rows));    // bottom right
+    pts_movie.push_back(cv::Point(0, movieFrame.rows));  // bottom left
+
+    // 2. Get Chessboard corner points 2D
+    // - Get chessboard 3D points
+    vector<cv::Point3f> vec3D;
+    vec3D.push_back(cv::Point3f(-7, 5, 0));
+    vec3D.push_back(cv::Point3f(15, 5, 0));
+    vec3D.push_back(cv::Point3f(15, -11, 0));
+    vec3D.push_back(cv::Point3f(-7, -11, 0));
+
+    // - Project to 2D points
+    vector<cv::Point2f> pts_dst_float;
+    cv::projectPoints(vec3D, rotVec, transVec, calibMatrix, distortCoeff,
+                      pts_dst_float);
+
+    vector<cv::Point> pts_dst(pts_dst_float.begin(), pts_dst_float.end());
+
+        // 3. if chessboard 2D points > 0
+        if (pts_dst.size() > 0) {
+        // 4. Find homography between the two frames
+        cv::Mat h = cv::findHomography(pts_movie, pts_dst);
+
+        // 5. Warped the movie frame
+        cv::Mat warpedMovFrame;  // output
+        cv::warpPerspective(movieFrame, warpedMovFrame, h, srcFrame.size(),
+                            cv::INTER_LINEAR);
+
+        // 6. Prepare a mask representing region to copy from the warped
+        // movie image into the original frame.
+        cv::Mat mask = cv::Mat::zeros(srcFrame.rows, srcFrame.cols, CV_8UC1);
+
+        // color the mask white on the Aruco area
+        cv::fillConvexPoly(mask, pts_dst, cv::Scalar(255, 255, 255),
+                           cv::LINE_AA);
+
+        // 7. Erode the mask to not copy the boundary effects from the
+        // warping
+        cv::Mat element =
+            cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+        cv::erode(mask, mask, element);
+
+        // 8. Copy the masked warped image into the srcFrame in the
+        // mask region.
+        cv::Mat srcWithMovie = srcFrame.clone();
+        warpedMovFrame.copyTo(srcWithMovie, mask);
+
+        // 9. output
+        srcWithMovie.copyTo(dstFrame);
+    }
+}
+
 void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
                         cv::Mat &dstFrame) {
     // 1. get movie corner points (src)
     // movieFrame = cv::imread("res/duck.png");
     std::vector<cv::Point> pts_movie;
-    pts_movie.push_back(cv::Point(0, 0));  // top left
-    pts_movie.push_back(cv::Point(movieFrame.cols, 0)); // top right
-    pts_movie.push_back(cv::Point(movieFrame.cols, movieFrame.rows)); // bottom right
+    pts_movie.push_back(cv::Point(0, 0));                // top left
+    pts_movie.push_back(cv::Point(movieFrame.cols, 0));  // top right
+    pts_movie.push_back(
+        cv::Point(movieFrame.cols, movieFrame.rows));    // bottom right
     pts_movie.push_back(cv::Point(0, movieFrame.rows));  // bottom left
 
     // 2. get aruco corner points
@@ -836,8 +899,5 @@ void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame,
         cv::Mat concatenatedOutput;
         cv::hconcat(srcFrame, srcWithMovie, concatenatedOutput);
         concatenatedOutput.copyTo(dstFrame);
-        // srcWithMovie.copyTo(dstFrame);
-
-
     }
 }

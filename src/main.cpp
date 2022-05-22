@@ -39,17 +39,17 @@ int videoMode() {
 
     // 2. create movie and real time video capture
     capdev = new cv::VideoCapture(0);
-    capMovie = new cv::VideoCapture("res/dog.mp4");
+    // capMovie = new cv::VideoCapture("res/sky.mp4");
 
     if (!capdev->isOpened()) {
         printf("Unable to open video device\n");
         return (-1);
     }
 
-    if (!capMovie->isOpened()) {
-        cout << "Error opening video stream or file" << endl;
-        return -1;
-    }
+    // if (!capMovie->isOpened()) {
+    //     cout << "Error opening video stream or file" << endl;
+    //     return -1;
+    // }
 
     capdev->set(cv::CAP_PROP_FRAME_WIDTH,
                 600);  // Setting the width of the video
@@ -94,8 +94,9 @@ int videoMode() {
     cv::Mat distortCoeff;  // 1X5 matrix
     vector<cv::Point3f> vertices;
     std::vector<std::vector<int>> faces;
+    string movFile;
 
-    float x_shift;
+        float x_shift;
     float y_shift;
     // readObjFile("res/shuttle.obj", vertices, faces);
     char intInput;
@@ -179,7 +180,7 @@ int videoMode() {
                      << formatMat->format(transVec) << endl;
 
             } else {
-                cout << "No camera with chessboard detected. Press \'P\' again "
+                cout << "No camera with chessboard detected. Press \'T\' again "
                         "once you put your chessboard in front of camera"
                      << endl;
                 op = none;
@@ -200,7 +201,7 @@ int videoMode() {
                                        rotVec, transVec);
                 srcFrame.copyTo(dstFrame);
             } else {
-                cout << "No camera with chessboard detected. Press \'P\' again "
+                cout << "No camera with chessboard detected. Press \'X\' again "
                         "once you put your chessboard in front of camera"
                      << endl;
                 op = none;
@@ -221,7 +222,7 @@ int videoMode() {
                                         rotVec, transVec);
                 srcFrame.copyTo(dstFrame);
             } else {
-                cout << "No camera with chessboard detected. Press \'P\' again "
+                cout << "No camera with chessboard detected. Press \'L\' again "
                         "once you put your chessboard in front of camera"
                      << endl;
                 op = none;
@@ -311,11 +312,26 @@ int videoMode() {
             if (getCameraPosition(chessboardSize, worldPoints, imagePoints,
                                   calibMatrix, distortCoeff, rotVec,
                                   transVec)) {
+                // >> given a movie frame and frame with aruco corners, map
+                // movie to
+                // the original srcFrame
+
+                *capMovie >> movieFrame;
+                if (movieFrame.empty()) {
+                    cout << "filling mov file" << endl;
+                    cout << movFile << endl;
+                    capMovie = new cv::VideoCapture(movFile);
+                    *capMovie >> movieFrame;
+                }
+                // *capMovie >> movieFrame;
+                projectMovieOnChessboard(srcFrame, rotVec, transVec, calibMatrix, 
+                distortCoeff, movieFrame, dstFrame);
+
                 drawVirtualObjectOnChessboard(srcFrame, rotVec, transVec,
                                               calibMatrix, distortCoeff,
-                                              vertices, faces);
+                                              vertices, faces, dstFrame);
 
-                srcFrame.copyTo(dstFrame);
+                // srcFrame.copyTo(dstFrame);
             } else {
                 cout << "No camera with chessboard detected. Press \'1, 2, or 3\' "
                         "again "
@@ -378,30 +394,39 @@ int videoMode() {
             op = opFast;
 
         } else if (key == '1') {
-            cout << "\n>>>>>>>>> draw virtual object from obj file..." << endl;
+            cout << "\n>>>>>>>>> draw shuttle from obj file..." << endl;
             op = opVirtualObj;
-            cout << "one 1" << endl;
    
             vertices.clear();
             faces.clear();
             readObjFile("res/shuttle.obj", vertices, faces);
+            if (movieFrame.empty() || movFile != "res/space.mp4") {
+                movFile = "res/space.mp4";
+                capMovie = new cv::VideoCapture(movFile);
+            }
         } else if (key == '2') {
-            cout << "\n>>>>>>>>> draw virtual object from obj file..." << endl;
+            cout << "\n>>>>>>>>> draw cow from obj file..." << endl;
             op = opVirtualObj;
 
-            cout << "two 2" << endl;
             vertices.clear();
             faces.clear();
             readObjFile("res/cow.obj", vertices, faces);
+            if (movieFrame.empty() || movFile != "res/grass.mp4") {
+                movFile = "res/grass.mp4";
+                capMovie = new cv::VideoCapture(movFile);
+            }
 
         } else if (key == '3') {
-            cout << "\n>>>>>>>>> draw virtual object from obj file..." << endl;
+            cout << "\n>>>>>>>>> draw plane from obj file..." << endl;
             op = opVirtualObj;
-            cout << "three 3" << endl;
 
             vertices.clear();
             faces.clear();
             readObjFile("res/plane.obj", vertices, faces);
+            if (movieFrame.empty() || movFile != "res/sky.mp4") {
+                movFile = "res/sky.mp4";
+                capMovie = new cv::VideoCapture(movFile);
+            }
         } else if (key == 32) {
             cout << ">>>>>>>>> reset..." << endl;
             op = none;

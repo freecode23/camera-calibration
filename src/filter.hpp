@@ -15,14 +15,7 @@
 #include <vector>
 using namespace std;
 
-/*
- * Implement a 5x5 Gaussian filter as separable 1x5 filters ([1 2 4 2 1]
- * vertical and horizontal) using the following function prototype. Implement
- * the function by accessing pixels, not using openCV filter functions. You can
- * assume the input is a color image and the output should also be a color
- * image. src is CV_8UC3 dst is CV_8UC3
- */
-void blur5x5(cv::Mat &src, cv::Mat &dst);
+
 
 /*
  * Given the path and image name, append a number to the image name so that it
@@ -114,11 +107,13 @@ void calibrating(cv::Mat srcFrame, vector<vector<cv::Point3f>> &listWorldPoints,
  * If the given calibration matrix and distortion is empty, it will load it from
  * a csv file as this is also need in using openCV solvePnP method.
  *
- * @param chessboardSize the size of the chessboard
- * @param worldPoints the 3D points of the board
- * @param imagePoints the 2D points of projection of the board to image
- * @param calibMatrix the calibration matrix
- * @param distortCoeff the distortion coefficient
+ * @param chessboardSize the input size of the chessboard
+ * @param worldPoints the input 3D points of the board
+ * @param imagePoints the input 2D points of projection of the board to image
+ * @param calibMatrix the input calibration matrix
+ * @param distortCoeff the input distortion coefficient
+ * @param rotVec the output rotation vector
+ * @param transVec the output translation vector
  * @return true if imagePoints size is not 0
  * @return false if imagePoints size is 0
  */
@@ -136,8 +131,8 @@ bool getCameraPosition(cv::Size chessboardSize,
  * @param srcFrame the frame that has the chessboard on it
  * @param calibMatrix the calibration matrix
  * @param distortCoeff the distortion coefficient
- * @param rotVec the output rotation vector
- * @param transVec the output translation vector
+ * @param rotVec the input rotation vector
+ * @param transVec the input translation vector
  */
 void draw3DAxesOnChessboard(cv::Mat &srcFrame, cv::Mat &calibMatrix,
                             cv::Mat &distortCoeff, cv::Mat &rotVec,
@@ -174,11 +169,12 @@ void readObjFile(const std::string &file_path, std::vector<cv::Point3f> &vertice
  * @param vertices 
  * @param faces 
  */
-void drawVirtualObjectOnChessboard(cv::Mat &srcFrame, cv::Mat &rvec, cv::Mat &tvec, 
-                cv::Mat &calibMatrix,
-                cv::Mat &distortCoeff,
-                vector<cv::Point3f> &vertices,
-                vector<vector<int>> &faces);
+void drawVirtualObjectOnChessboard(cv::Mat &srcFrame, cv::Mat &rvec,
+                                   cv::Mat &tvec, cv::Mat &calibMatrix,
+                                   cv::Mat &distortCoeff,
+                                   vector<cv::Point3f> &vertices,
+                                   vector<vector<int>> &faces,
+                                   cv::Mat &dstFrame);
 
 // Extension 2
 /** 
@@ -190,5 +186,9 @@ void drawVirtualObjectOnChessboard(cv::Mat &srcFrame, cv::Mat &rvec, cv::Mat &tv
  */
 void createMovieOnAruco(cv::Mat &srcFrame, cv::Mat &movieFrame, cv::Mat &dstFrame);
 
+void projectMovieOnChessboard(cv::Mat &srcFrame, cv::Mat &rotVec,
+                              cv::Mat &transVec, cv::Mat &calibMatrix,
+                              cv::Mat &distortCoeff, cv::Mat &movieFrame,
+                              cv::Mat &dstFrame);
 
 #endif
