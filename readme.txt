@@ -1,16 +1,5 @@
 1. Link to videos: 
-Aruco:
-https://streamable.com/72bvi5
-
-comparing 2 cameras:
-https://streamable.com/jyy00c
-
-virtual objects:
-https://streamable.com/aqygi4
-
-covering targets
-https://streamable.com/ogt7tb
-
+https://www.youtube.com/watch?v=IRSFZkt5T7M
 
 2. Link to project report: 
 https://docs.google.com/document/d/1cZhryDospsjKxchhTuRttSbL4PmPd6a3vwsP2MC8YmQ/edit?usp=sharing
