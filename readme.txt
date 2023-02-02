@@ -1,3 +1,6 @@
+0. blog link:
+https://hartono-s.herokuapp.com/blogposts/6332bbf65c8dbd892f9e2495
+
 1. Link to videos: 
 https://www.youtube.com/watch?v=IRSFZkt5T7M
 
